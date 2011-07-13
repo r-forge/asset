@@ -1,0 +1,9 @@
+Package: ASSET
+Title: An R package for subset-based association analysis of heterogeneous traits and subtypes
+Version: 1.0.0
+Date: 2011-05-17
+Author: Samsiddhi Bhattacharjee, Nilanjan Chatterjee and William Wheeler
+Description: An R package for subset-based analysis of heterogeneous traits and subtypes
+Maintainer: William Wheeler <WheelerB@imsweb.com>
+Depends: R (>= 2.10.1), MASS, msm, rmeta
+License: GPL-2

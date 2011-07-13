@@ -1,0 +1,21 @@
+
+\documentclass[a4paper]{article}
+
+% \VignetteIndexEntry{Vignette}
+
+\begin{document}
+
+\title{ASSET(Association with SubSET) Package}
+\maketitle
+
+<<>>=
+library(ASSET)
+@
+
+\section*{Example of h.traits}
+
+\section*{Example of h.types}
+
+\end{document}
+
+%
