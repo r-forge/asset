@@ -44,6 +44,7 @@ p.dlm <- function(t.vec, k, search, side, cor.def = NULL, cor.args=NULL, sizes=r
 	if(k <= 0 || (k%%1 != 0)) stop("Number of studies k, not a positive integer!")
 	if(!search %in% c(0, 1, 2)) stop("Invalid search option")
 	if(search < 2 && !(side %in% c(1, 2))) stop("side should be 1 or 2")
+	if(search == 2) side <- 1
 	
 	if(any(t.vec < 0)) warning("Negative input thresholds! Using absolute value.")
 	
@@ -193,6 +194,7 @@ qxd.prod.coef <- function(zv, search, side, beta.mat)
 	
 	r.vec <- (1 - b.s^2 - b.k^2)/(2 * b.s * b.k)
 #	rho <- ((1 - b.k^2) + b.s^2)/(2 * b.s)
+	
 	mu.z <- r.vec %o% zv
 	sd <- sqrt(1 - r.vec^2)
 	
