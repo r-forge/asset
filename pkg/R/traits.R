@@ -19,13 +19,14 @@ h.traits <- function(snp.vars, traits.lab, beta.hat, sigma.hat, ncase, ncntl, co
 	colnames(beta.hat) <- traits.lab
 	colnames(sigma.hat) <- traits.lab
 	
-	if(!((length(ncase) == k) && is.null(dim(ncase))) && !(is.matrix(ncase) && (ncol(ncase) == k) && !(nrow(ncase) == nsnp)))
-		stop("ncase should be a vector of size k or a matrix if dimension nsnp X k")
+	if(!((length(ncase) == k) && is.null(dim(ncase))) && !(is.matrix(ncase) && (ncol(ncase) == k) && (nrow(ncase) == nsnp)))
+		stop("ncase should be a vector of size k or a matrix of dimension nsnp X k")
 	if(is.null(dim(ncase))) dim(ncase) <- c(1, k)
-	if(!((length(ncntl) == k) && is.null(dim(ncntl))) && !(is.matrix(ncntl) && (ncol(ncntl) == k) && !(nrow(ncntl) == nsnp)))
+	if(!((length(ncntl) == k) && is.null(dim(ncntl))) && !(is.matrix(ncntl) && (ncol(ncntl) == k) && (nrow(ncntl) == nsnp)))
 		stop("ncntl should be a vector of size k or a matrix of dimension nsnp X k")
 	if(is.null(dim(ncntl))) dim(ncntl) <- c(1, k)
 
+	if(is.null(cor)) cor <- diag(k)
 	if(!is.matrix(cor) && !is.list(cor)) stop("cor should be a matrix or a list")
 	if(is.list(cor))
 	{
@@ -35,7 +36,6 @@ h.traits <- function(snp.vars, traits.lab, beta.hat, sigma.hat, ncase, ncntl, co
 			stop("N11, N00, N10 and N01 should be square matrices of dimension k")
 		cor <- corr.mat.logit(cor$N11, cor$N00, cor$N10, cor$N01)
 	}
-	if(is.null(cor)) cor <- diag(k)
 
 	if(!is.null(colnames(cor)) && any(colnames(cor) != traits.lab)) stop("cor should have column names in same order as traits.lab")
 	if(!is.null(rownames(cor)) && any(rownames(cor) != traits.lab)) stop("cor should have row names in same order as traits.lab")

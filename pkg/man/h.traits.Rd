@@ -59,7 +59,65 @@ The matrices \code{N11}, \code{N00}, \code{N10} and \code{N01} are used to calcu
 that is held
 fixed for all SNPs. This is based on the assumption that a fixed proportion of data is missing from all overlap categories,
 so that the correlation is unaffected.
-
-The output standard errors are approximate (based on inverting DLM pvalues) and are used for constructing confidence intervals 
-in \code{\link{h.summary}} and \code{\link{traits.forest}}.
+Meta-analysis results are based on the inverse variance weighting approach, i.e. Z-scores are weighted according to the sample
+sizes in \code{ncase} and \code{ncntl} using the formula:
+The output standard errors are approximate (based on inverting pvalues) and are used for constructing confidence
+intervals in \code{\link{h.summary}} and \code{\link{traits.forest}}.
 }
+
+\references{ Bhattacharjee S, Chatterjee N and others. A new paradigm for meta-analysis of genetic data in the
+presence of heterogeneity. Submitted. \cr
+}
+
+\seealso{ \code{\link{h.summary}}, \code{\link{traits.forest}} }
+
+\examples{
+ # Use the example data
+ data(Xdata, package="ASSET")
+
+ # Note the case control distribution
+ Xdata$Subtype <- as.character(Xdata$Subtype)
+ table(Xdata$Subtype)
+ 
+ # For illustration, let us obtain SNP level summaries for each of the 6 subtypes, treated as 
+ # a separate trait (and study) with the controls being split among the 6 studies, to 
+ # create independent studies. The first five subtypes are assined 150 controls each, the 
+ # remaining 250 controls are assigned to the sixth subtype.
+ 
+ tlab <- paste("T", 1:6, sep="")
+ clab <- paste("C", 1:6, sep="")
+
+ cntl.pos <- which(Xdata$Subtype=="Control")
+ for(j in 1:5) { Xdata$Subtype[cntl.pos[(j - 1) * 150 + (1:150)]] <- clab[j] }
+ Xdata$Subtype[cntl.pos[5 * 150 + (1:250)]] <- clab[6]
+ table(Xdata$Subtype)
+ 
+ # Create summary matrices by running separate logistic regressions on each study,
+ snps <- c("SNP1", "SNP2", "SNP3")
+ adjust <- c("Age", "Sex", "EV1", "EV2")
+ beta <- sd <- ncase <- ncntl <- matrix(NA, 3, 6)
+ for(j in 1:6)
+ {
+	res <- h.types(Xdata, response.var="Subtype", snp.vars=snps, adj.vars=adjust
+		, types.lab=tlab[j], cntl.lab=clab[j], pool= -1, side=2, logit=TRUE, meth = "Wald")
+		
+	ncase[, j] <- sapply(snps, function(snp) nrow(na.omit(Xdata[Xdata$Subtype == tlab[j], c("Subtype", snp, adjust)])))
+	ncntl[, j] <- sapply(snps, function(snp) nrow(na.omit(Xdata[Xdata$Subtype == clab[j], c("Subtype", snp, adjust)])))
+	beta[, j] <- res$Overall.Logistic$beta
+	sd[, j] <- res$Overall.Logistic$sd
+ }
+ exp(beta)
+  
+ # Now let us call h.traits on these summary data. The correlation matrix does not need to be 
+ # specified as studies are independent.
+
+ res <- h.traits(snp.vars=snps, traits.lab=tlab, beta.hat=beta, sigma.hat=sd, ncase=ncase
+			, ncntl=ncntl, cor=NULL, cor.numr=FALSE, search=NULL, side=2, meta=TRUE, zmax.args=NULL
+			, meth.pval="DLM")
+ 
+ h.summary(res)
+
+}
+ 
+
+\keyword{ traits } 
