@@ -81,11 +81,17 @@ h.traits <- function(snp.vars, traits.lab, beta.hat, sigma.hat, ncase, ncntl, co
 		for(j in 1:nsnp)
 		{
 			jj <- if(nrow(ncase) == 1) 1 else j
-			res <- h.traits1(k, beta.hat[j, ], sigma.hat[j, ], ncase[jj, ], ncntl[jj, ], rmat=cor
-							 , cor.numr=cor.numr, side = side, zmax.args=zmax.args
-							 , meth.pval=meth.pval, pval.args=pval.args)
+			sub <- !(is.na(beta.hat[j, ]) | is.na(sigma.hat[j, ]) | is.na(ncase[jj, ]) | is.na(ncntl[jj, ]))
+			if(any(sub))
+			{
+				nsub <- sum(sub)
+				rmat <- matrix(cor[sub, sub], nsub, nsub)
+				res <- h.traits1(nsub, beta.hat[j, sub], sigma.hat[j, sub], ncase[jj, sub], ncntl[jj, sub], rmat = rmat
+						 , cor.numr=cor.numr, side = side, zmax.args=zmax.args
+						 , meth.pval=meth.pval, pval.args=pval.args)
+			}
 			pval[j] <- res$pval
-			pheno[j, ] <- res$pheno
+			pheno[j, sub] <- res$pheno
 			beta[j] <- res$beta
 			sd[j] <- res$sd
 		}
@@ -100,15 +106,23 @@ h.traits <- function(snp.vars, traits.lab, beta.hat, sigma.hat, ncase, ncntl, co
 		for(j in 1:nsnp)
 		{
 			jj <- if(nrow(ncase) == 1) 1 else j
-			res <- h.traits2(k, beta.hat[j, ], sigma.hat[j, ], ncase[jj, ], ncntl[jj, ], rmat=cor
-							 , cor.numr=cor.numr, side = side, zmax.args=zmax.args
-							 , meth.pval=meth.pval, pval.args=pval.args)
+			res <- NULL
+			sub <- !(is.na(beta.hat[j, ]) | is.na(sigma.hat[j, ]) | is.na(ncase[jj, ]) | is.na(ncntl[jj, ]))
+			if(any(sub))
+			{
+				nsub <- sum(sub)
+				rmat <- matrix(cor[sub, sub], nsub, nsub)
+				res <- h.traits2(nsub, beta.hat[j, sub], sigma.hat[j, sub], ncase[jj, sub], ncntl[jj, sub], rmat = rmat
+						 , cor.numr=cor.numr, side = side, zmax.args=zmax.args
+						 , meth.pval=meth.pval, pval.args=pval.args)
+			}
+			
 			pval[j] <- res$pval
 			pval1[j] <- res$pval.1
 			pval2[j] <- res$pval.2
 			
-			pheno1[j, ] <- res$pheno.1
-			pheno2[j, ] <- res$pheno.2
+			pheno1[j, sub] <- res$pheno.1
+			pheno2[j, sub] <- res$pheno.2
 			
 			beta1[j] <- res$beta.1
 			beta2[j] <- res$beta.2

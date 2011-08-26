@@ -117,7 +117,7 @@ dlm.pval <- function(t.vec, k, search, side, cor.def, cor.args, sizes = rep(1, k
 		
 		if(length(t.sub) > 0 && search < 2)
 		{
-			rho <- do.call(cor.def, c(list(x, nn.x[, nn.sub], k), cor.args))
+			rho <- do.call(cor.def, c(list(x, matrix(nn.x[, nn.sub], nrow=k, byrow=FALSE), k), cor.args))
 			nr <- dim(rho)[1]
 
 			int <- sapply(t.sub, function(j) qxd.prod.int(low[j], high[j], search, qxd.prod.cor, side=side
