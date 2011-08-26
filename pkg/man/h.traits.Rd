@@ -95,7 +95,7 @@ presence of heterogeneity. Submitted. \cr
  # Create summary matrices by running separate logistic regressions on each study,
  snps <- c("SNP1", "SNP2", "SNP3")
  adjust <- c("Age", "Sex", "EV1", "EV2")
- beta <- sd <- ncase <- ncntl <- matrix(NA, 3, 6)
+ beta <- sigma <- ncase <- ncntl <- matrix(NA, 3, 6)
  for(j in 1:6)
  {
 	res <- h.types(Xdata, response.var="Subtype", snp.vars=snps, adj.vars=adjust
@@ -104,14 +104,14 @@ presence of heterogeneity. Submitted. \cr
 	ncase[, j] <- sapply(snps, function(snp) nrow(na.omit(Xdata[Xdata$Subtype == tlab[j], c("Subtype", snp, adjust)])))
 	ncntl[, j] <- sapply(snps, function(snp) nrow(na.omit(Xdata[Xdata$Subtype == clab[j], c("Subtype", snp, adjust)])))
 	beta[, j] <- res$Overall.Logistic$beta
-	sd[, j] <- res$Overall.Logistic$sd
+	sigma[, j] <- res$Overall.Logistic$sd
  }
  exp(beta)
   
  # Now let us call h.traits on these summary data. The correlation matrix does not need to be 
  # specified as studies are independent.
 
- res <- h.traits(snp.vars=snps, traits.lab=tlab, beta.hat=beta, sigma.hat=sd, ncase=ncase
+ res <- h.traits(snp.vars=snps, traits.lab=tlab, beta.hat=beta, sigma.hat=sigma, ncase=ncase
 			, ncntl=ncntl, cor=NULL, cor.numr=FALSE, search=NULL, side=2, meta=TRUE, zmax.args=NULL
 			, meth.pval="DLM")
  

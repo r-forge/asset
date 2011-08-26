@@ -4,8 +4,8 @@ p.bon <- function(t.vec, k, search, side)
 {
 	if(any(t.vec < 0)) warning("Negative input thresholds! Using absolute value.")
 	t.vec <- abs(t.vec)
-	if(search < 2 & side == 2) pval.b <- 2 * pnorm(t.vec, lower.tail=FALSE) * (2^k)
-	if(search < 2 & side == 1) pval.b <- pnorm(t.vec, lower.tail=FALSE) * (2^k)
+	if(search < 2 & side == 2) pval.b <- pmin(2 * pnorm(t.vec, lower.tail=FALSE) * (2^k), 1)
+	if(search < 2 & side == 1) pval.b <- pmin(pnorm(t.vec, lower.tail=FALSE) * (2^k), 1)
 	if(search == 2) stop("Seach option 2 not yet implemented")
 	pval.b
 }
@@ -118,9 +118,10 @@ dlm.pval <- function(t.vec, k, search, side, cor.def, cor.args, sizes = rep(1, k
 		if(length(t.sub) > 0 && search < 2)
 		{
 			rho <- do.call(cor.def, c(list(x, nn.x[, nn.sub], k), cor.args))
-			nc <- dim(rho)[2]
+			nr <- dim(rho)[1]
+
 			int <- sapply(t.sub, function(j) qxd.prod.int(low[j], high[j], search, qxd.prod.cor, side=side
-										, rho.mat = matrix(rho[, (j - 1) %% nc + 1], ncol=1)))
+										, rho.mat = matrix(rho[, (j - 1) %% nr + 1], ncol=1)))
 			ss[t.sub] <- ss[t.sub] + NXX * int
 			
 		}
@@ -128,7 +129,7 @@ dlm.pval <- function(t.vec, k, search, side, cor.def, cor.args, sizes = rep(1, k
 		{
 			beta <- do.call(cor.def, c(list(x, nn.x[, nn.sub], k), cor.args))
 			
-			nc <- dim(beta)[3]
+			nr <- dim(beta)[1]
 
 #			nn.x2 <- diag(1, k)
 #			sgn <- 1 - 2 * x
@@ -144,7 +145,7 @@ dlm.pval <- function(t.vec, k, search, side, cor.def, cor.args, sizes = rep(1, k
 #			rho.mat <- cbind(r.vec, r.vec2, r.vec3)
 
 			int <- sapply(t.sub, function(j) qxd.prod.int(low[j], high[j], search, qxd.prod.coef, side=side
-									, beta.mat = matrix(beta[, , (j - 1) %% nc + 1], ncol = 2)))
+									, beta.mat = matrix(beta[, , (j - 1) %% nr + 1], ncol = 2)))
 			ss[t.sub] <- ss[t.sub] + NXX * int
 		}
 		if(length(t.sub) == 0) break
@@ -361,10 +362,10 @@ cor.meta <- function(x1, X2, k, ncase, ncntl, rmat=NULL, cor.numr=FALSE)
 		sx11 <- t(matrix(rneff1, ncol=nsnp)) %*% matrix(rmat[x1, x1], n1, n1) %*% matrix(rneff1, ncol = nsnp)
 		sx22 <- t(matrix(rneff2, ncol=nsnp)) %*% matrix(rmat[x2, x2], n2, n2) %*% matrix(rneff2, ncol = nsnp)
 			
-		rho <- ifelse(sx11 == 0 || sx22 == 0, NA, sx12/sqrt(sx11 * sx22))
+		rho <- ifelse(sx11 == 0 | sx22 == 0, NA, sx12/sqrt(sx11 * sx22))
 		rho		
 	}
-	rho.mat <- t(apply(X2, 2, cor.func))
+	rho.mat <- matrix(apply(X2, 2, cor.func), ncol = nsnp, byrow = TRUE)
 	rho.mat
 }
 

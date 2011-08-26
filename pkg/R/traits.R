@@ -149,7 +149,7 @@ h.traits1 <- function(k, beta.hat, sigma.hat, ncase, ncntl, rmat, cor.numr, side
 		pval <- do.call(p.tube, c(list(t.vec=abs(zopt), k=k, side = side, ncase=ncase
 								, ncntl=ncntl, rmat=rmat, cor.numr=cor.numr), pval.args))
 	}
-	if(meth.pval=="B") pval.b <- p.bon(abs(zopt), k, search = 1, side = side)
+	if(meth.pval=="B") pval <- p.bon(abs(zopt), k, search = 1, side = side)
 
 	beta <- sd <- NA
 		
