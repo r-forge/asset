@@ -6,20 +6,26 @@
 Association analysis for SubSETs
 }
 \description{
-This package is for subset-based association analysis of heterogeneous but possibly related traits measured
-in different studies or the same study, where each individual can have only one phenotype (say a cancer type
-or a histological subtype). Thus, this package is not appropriate for multivatiate phenotype analysis where
-the different traits may be measured on the same person.
+This package is for subset-based association analysis of heterogeneous but possibly related traits. 
 }
 \details{
-The main functions for analysis of heterogenous traits (from separate studies) and subtype analysis within
-a single case-control study are \code{\link{h.traits}} and \code{\link{h.types}} respectively. The helper functions
-\code{\link{z.max}} and \code{\link{p.dlm}} are generic functions called internally for specific definitions of
-test statistics and correlations and without any subset restrictions. These functions are provided to facilitate customization
-to other application settings that involve z-score maximization over subsets. For example ordering restrictions can be imposed
-on subsets by passing a function argument \code{sub.def} to \code{z.max} and \code{p.dlm}.
-The functions \code{\link{h.summary}}, \code{\link{types.forest}} and \code{\link{traits.forest}} are also provided for 
-a quick summary and visual representation of subset specific effects and their confidence intervals.
+The package consists of two main functions: (1) \code{\link{h.traits}} and (2) \code{\link{h.types}}. The function \code{\link{h.traits}}
+is suitable for conducting meta-analysis of studies of possibly different traits when summary level data are available from individual
+studies. The function allows correlation among different studies/traits, which, for example, may arise due to shared subjects accross studies.
+The function can also be used to conduct "meta-analysis" across multiple correlated traits on the same individuals by appropriately specifying the correlation
+matrix for the multivariate trait. The method, however, is not optimized yet (from a power perspective) for analyzing multivariate traits measured on the same 
+individuals. The function \code{\link{h.types}} is suitable for analysis of case-control studies when cases consist of distinct disease subtypes. This
+function assumes individual level data are available. 
+The functions \code{\link{h.summary}}, \code{\link{types.forest}} and \code{\link{traits.forest}} are useful for summarizing results and diplaying forest plots. 
+The helper functions
+\code{\link{z.max}} and \code{\link{p.dlm}} are generic functions called internally for obtaining the maximized subset-based test-statistics and the corresponding
+p-values approximated by the Discrete Local Maximization (DLM) method. These functions can be further customized for specific applications. 
+For example, the default options of these functions currently assume all possible subsets to search. For analysis of case-control studies with ordered 
+diseased subtypes (e.g. stages of a cancer), however, it may be more meaningful to restrict the subset search to incorporate ordering 
+constraints among the disease subtypes. In such a situation, one can pass a function argument \code{sub.def} to \code{z.max} and \code{p.dlm} for performing restricted
+subset searches.
 }
 \author{Samsiddhi Bhattacharjee, Nilanjan Chatterjee and William Wheeler <wheelerb@imsweb.com>}
 \keyword{package}
+\references{ Bhattacharjee S, Chatterjee N and others. A subset-based approach improves power and interpretation for combined-analysis of genetic association studies of heterogeneous traits. Submitted. \cr
+}
