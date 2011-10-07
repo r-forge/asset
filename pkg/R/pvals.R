@@ -415,7 +415,7 @@ tubeSim <- function(x, t0, nsamp, rmat0, neff0, cor.numr=FALSE)
 				rr[x] <- mySolve(rmat[x, x], rneff[x])
 			}
 			else rr <- (rneff * x)
-			
+		
 			A <- diag(k)
 			A[r1, ] <- rr/sqrt(sum(matrix(rr, nrow=1) %*% rmat %*% matrix(rr, ncol=1)))
 			A <- A[c(r1, r2), ]
@@ -431,14 +431,14 @@ tubeSim <- function(x, t0, nsamp, rmat0, neff0, cor.numr=FALSE)
 			}
 			Sigroot <- ev$vectors %*% diag(sqrt(ev$values), length(ev$values)) %*% t(ev$vectors)
 		}
-		
+	
 		W1 <- rtnorm(nsamp, mean = 0, sd = sqrt(Sigma[1, 1]), lower = t0[j])
 		mu <- outer(Sigma[(2:k), 1]/Sigma[1, 1], W1)
 		
 		W2 <- t(matrix(rnorm(nsamp * (k - 1)), nrow = nsamp) %*% Sigroot) + mu				
 		
 		W <- rbind(W1, W2)
-		
+	
 		Z[, , j] <- solve(A) %*% W
 	}
 	Z
@@ -590,6 +590,7 @@ tube.pval <- function(t.vec, k, search, side, ncase, ncntl, pool, rmat = NULL
 		if(is.null(rmat)) rmat <- diag(k)
 		rmat <- matrix(as.vector(rmat), ncol=1)
 	}
+
 	if(search == 0)
 	{
 		N <- apply(ncase, 2, sum) + ncntl
@@ -654,7 +655,7 @@ tube.pval <- function(t.vec, k, search, side, ncase, ncntl, pool, rmat = NULL
 		if(!is.null(sub.def) && !do.call(sub.def, c(list(set), sub.args))) { jj <- jj + 1 ; next }
 				
 		mm <- prod(choose(sizes, xx))
-		
+	
 		if(search == 1)
 		{
 			Z1 <- tubeSim(x = x, t0 = t.vec, nsamp = nsamp, rmat = rmat, neff = neff)

@@ -1,8 +1,22 @@
 
-h.types <- function(dat, response.var, snp.vars, adj.vars, types.lab, cntl.lab, subset=NULL, pool=NULL, side=2
-, logit=FALSE, meth = "Score", zmax.args = NULL, meth.pval = c("DLM", "IS", "B"), pval.args = NULL)
+h.types <- function(dat, response.var, snp.vars, adj.vars, types.lab, cntl.lab, subset=NULL, method=NULL, side=2
+, logit=FALSE, test.type = "Score", zmax.args = NULL, meth.pval = c("DLM", "IS", "B"), pval.args = NULL)
 
 {
+     if (!is.null(method)) {
+       if (length(method) != 1) stop("ERROR: The method option must be NULL, case.control, or case.complement")
+       method <- tolower(method)
+       if (method == -1) {
+         pool <= -1
+       } else {
+         temp <- c("case-control", "case-complement") %in% method
+         if (!any(temp)) stop("ERROR: The method option must be NULL, case-control, or case-complement")
+         pool <- temp[2]
+       }
+     } else {
+       pool <- NULL
+     }
+     meth <- test.type
 	if(!is.null(subset) && sum(subset) == 0) stop("Empty subset of rows")
 	meth.pval <- meth.pval[1]
 	k <- length(types.lab)
@@ -52,7 +66,12 @@ h.types <- function(dat, response.var, snp.vars, adj.vars, types.lab, cntl.lab, 
 		else CC.res <- res
 	}
 
-	ret <- list(Overall.Logistic = logit.res, Subset.Case.Control = SC.res, Subset.Case.Complement = CC.res)
+	#ret <- list(Overall.Logistic = logit.res, Subset.Case.Control = SC.res, Subset.Case.Complement = CC.res)
+    ret <- list(Overall.Logistic=logit.res, Subset.Case.Control=SC.res, Subset.Case.Complement=CC.res,
+                data=dat, response.var=response.var, adj.vars=adj.vars, types.lab=types.lab,
+                cntl.lab=cntl.lab, subset=subset, method=method, side=side, test.type=test.type,
+                zmax.args=zmax.args, meth.pval=meth.pval, pval.args=pval.args, logit=logit)
+
 	ret
 }
 
@@ -377,7 +396,7 @@ types.wald <- function(sub, snp.vars, dat, response.var, adj.vars, types.lab, cn
 	list(z=z, beta=beta, sd=sd, pval=pval)
 }
 
-types.forest <- function(dat, snp.var, response.var, adj.vars, types.lab, cntl.lab, subset=NULL, rlist = NULL
+types.forest0 <- function(dat, snp.var, response.var, adj.vars, types.lab, cntl.lab, subset=NULL, rlist = NULL
 , level = 0.05, p.adj = TRUE, digits = 2)
 {
 	if(length(snp.var) > 1) stop("Length of snp.var should be 1")
@@ -394,12 +413,72 @@ types.forest <- function(dat, snp.var, response.var, adj.vars, types.lab, cntl.l
 	} else
 	{
 		rlist <- h.types(dat=dat, snp.vars=snp.var, response.var=response.var, adj.vars=adj.vars
-						 , types.lab=types.lab, cntl.lab=cntl.lab, subset=subset, pool = NULL, logit = TRUE, meth = "Wald")
+						 , types.lab=types.lab, cntl.lab=cntl.lab, subset=subset, method = NULL,
+                         logit = TRUE, test.type = "Wald")
 	}
-	
+ 	
 	res <- 	types.wald(sub = nsub, snp.vars=rep(snp.var, k), dat=dat, response.var=response.var, adj.vars=adj.vars
 					   , types.lab=types.lab, cntl.lab=cntl.lab, subset=subset, pool=FALSE)
-	
+
 	h.forest(k, snp.var, types.lab, rlist, res, side = 1, level=level, p.adj = p.adj, digits=digits)
 }
+
+types.forest <- function(rlist, snp.var, level=0.05, p.adj=TRUE, digits=2)
+{
+	if(length(snp.var) > 1) stop("Length of snp.var should be 1")
+	if(!(snp.var %in% colnames(rlist$data))) stop("colnames of data does not have snp.var")
+    types.lab    <- rlist$types.lab
+    cntl.lab     <- rlist$cntl.lab
+    response.var <- rlist$response.var
+    adj.vars     <- rlist$adj.vars
+    subset       <- rlist$subset
+    method       <- rlist$method
+    side         <- rlist$side
+    test.type    <- rlist$test.type
+    zmax.args    <- rlist$zmax.args
+    meth.pval    <- rlist$meth.pval
+    pval.args    <- rlist$pval.args 
+
+	k <- length(types.lab)
+	nsub <- matrix(FALSE, k, k)
+	diag(nsub) <- TRUE
+	
+    ov      <- rlist[["Overall.Logistic", exact=TRUE]]
+    cc      <- rlist[["Subset.Case.Control", exact=TRUE]]
+    cp      <- rlist[["Subset.Case.Complement", exact=TRUE]]
+    ov.flag <- !is.null(ov)
+    cc.flag <- !is.null(cc)
+    cp.flag <- !is.null(cp)
+    if ((!ov.flag) || (!cc.flag) || (!cp.flag)) {
+      if (ov.flag) {
+        logit <- FALSE
+      } else {
+        logit <- TRUE
+      }
+
+      method <- "-1"
+      if ((!cc.flag) && (!cp.flag)) {
+        method <- NULL
+      } else if (!cc.flag) {
+        method <- "case-control"
+      } else if (!cp.flag) {
+        method <- "case-complement"
+      }
+
+      ret <- h.types(rlist$data, response.var, snp.var, adj.vars, types.lab, cntl.lab, subset=subset,
+              method=method, side=side, logit=logit, test.type=test.type, zmax.args=zmax.args, 
+              meth.pval=meth.pval, pval.args=pval.args)
+      if (!ov.flag) ov <- ret[["Overall.Logistic", exact=TRUE]]
+      if (!cc.flag) cc <- ret[["Subset.Case.Control", exact=TRUE]]
+      if (!cp.flag) cp <- ret[["Subset.Case.Complement", exact=TRUE]]
+    }
+    
+    newlist <- list(Overall.Logistic=ov, Subset.Case.Control=cc, Subset.Case.Complement=cp)
+    
+	res <- 	types.wald(sub = nsub, snp.vars=rep(snp.var, k), dat=rlist$data, response.var=response.var, 
+               adj.vars=adj.vars, types.lab=types.lab, cntl.lab=cntl.lab, subset=subset, pool=FALSE)
+
+	h.forest(k, snp.var, types.lab, newlist, res, side = 1, level=level, p.adj = p.adj, digits=digits)
+}
+
 

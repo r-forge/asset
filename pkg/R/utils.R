@@ -28,7 +28,6 @@ corr.mat.logit <- function(nmat11, nmat00, nmat10=NULL, nmat01=NULL)
 	
 	rmat <- (nmat11 * outer(1/nvec1, 1/nvec1) + nmat00 * outer(1/nvec0, 1/nvec0)
 			 -nmat10 * outer(1/nvec1, 1/nvec0) - nmat01 * outer(1/nvec0, 1/nvec1)) * sqrt(outer(neff, neff))
-	
 	rmat
 }
 
@@ -133,10 +132,13 @@ h.summary <- function(rlist, level = 0.05, digits = 3)
 		if(!is.null(rlist[[i]]))
 		{
 			res <- rlist[[i]]
-			if(!is.list(res)) stop("Expected a list")
+			#if(!is.list(res)) stop("Expected a list")
+            if (!is.list(res)) next
 
 			len <- length(res$pval)
-			if(len == 0) { warning("Empty p-value vector") ; next }
+			#if(len == 0) { warning("Empty p-value vector") ; next }
+            if(len == 0) next 
+
 			svars <- names(res$pval)
 			if(is.null(svars)) svars <- paste("SNP-", 1:len, sep="")
 			spheno <- NULL
@@ -145,7 +147,12 @@ h.summary <- function(rlist, level = 0.05, digits = 3)
 			{
 				if(length(res$beta) != len || length(res$sd) != len) stop("beta and sd expected")
 				CI <- getCI(res$beta, res$sd, level = level)
-				mat <- signif(cbind(res$pval, CI$mid, CI$low, CI$high), digits=digits)
+				#mat <- signif(cbind(res$pval, CI$mid, CI$low, CI$high), digits=digits)
+                mid11 <- round(CI$mid, digits=digits)
+                low11 <- round(CI$low, digits=digits)
+                high11 <- round(CI$high, digits=digits)
+                #mat <- cbind(res$pval, CI$mid, CI$low, CI$high)
+                mat <- cbind(res$pval, mid11, low11, high11)
 				colnames(mat) <- c("Pvalue", "OR", "CI.low", "CI.high")
 			}
 
@@ -156,9 +163,12 @@ h.summary <- function(rlist, level = 0.05, digits = 3)
 				if(length(res$pval.2) != len || length(res$beta.2) != len || length(res$sd.2) != len) stop("pval.2, beta.2 and sd.2 expected")
 				CI.2 <- getCI(res$beta.2, res$sd.2, level = level)
 
-				mat <- signif(cbind(res$pval, res$pval.1, res$pval.2, CI.1$mid, CI.1$low, CI.1$high
-									, CI.2$mid, CI.2$low, CI.2$high), digits=digits)
+				#mat <- signif(cbind(res$pval, res$pval.1, res$pval.2, CI.1$mid, CI.1$low, CI.1$high
+				#					, CI.2$mid, CI.2$low, CI.2$high), digits=digits)
+                mat <- cbind(res$pval, res$pval.1, res$pval.2, CI.1$mid, CI.1$low, CI.1$high
+									, CI.2$mid, CI.2$low, CI.2$high)
 				colnames(mat) <- c("Pvalue", "Pvalue.1", "Pvalue.2", "OR.1", "CI.low.1", "CI.high.1", "OR.2", "CI.low.2", "CI.high.2")
+                for (ii in 4:9) mat[, ii] <- round(mat[, ii], digits=digits)
 			}
 
 			if(!is.null(res$pheno))
@@ -298,10 +308,40 @@ h.forest <- function(k, snp.var, t.lab, rlist, res, side, level, p.adj, digits)
 					 , FALSE, TRUE, rep(FALSE, sum(pos)), FALSE, rep(TRUE, 2))
 	if(side == 1) is.summary <- c(is.summary, TRUE)
 	if(side == 2) is.summary <- c(is.summary, c(TRUE, TRUE, TRUE))
-	
 	rmeta::forestplot(tabletext, c(NA, log(mid)), c(NA, log(low)), c(NA, log(high)), zero=0, is.summary=is.summary
 				, clip=c(log(1/5),log(5)), xlog=TRUE, col=meta.colors(box="royalblue", line="darkblue", summary="royalblue"))
 
 	title(main=snp.var)
 }
+
+# Function to compute the ordinary meta-analysis standard error for estimate of beta based 
+# on studies selected as part of s ignoring the randomness of the set s
+meta.se <- function(rmat, sigma, subset=NULL) {
+  # rmat   Correlation matrix for beta
+  # sigma  Vector of standard errors
+  
+  dim(sigma) <- NULL
+  if (!is.null(subset)) {
+    sigma <- sigma[subset]
+    rmat  <- as.matrix(rmat[subset, subset])
+  }
+  n          <- length(sigma)
+  if (!n) return(NA)
+  if (n == 1) {
+    temp <- sigma
+    dim(temp) <- c(1, 1)
+  } else {
+    temp      <- diag(sigma)
+  }
+  COV        <- temp %*% rmat %*% temp
+  s2inv      <- 1/(sigma*sigma)
+  sum        <- sum(s2inv)
+  denom      <- sum*sum
+  dim(s2inv) <- c(1, n)
+  se <- sqrt((s2inv %*% COV %*% t(s2inv))/denom)
+  dim(se) <- NULL
+  se
+
+} # END: meta.se
+
 

@@ -7,13 +7,13 @@ h.traits <- function(snp.vars, traits.lab, beta.hat, sigma.hat, ncase, ncntl, co
 	meth.pval <- meth.pval[1]
 
 	nsnp <- length(snp.vars)
-	
+
 	beta.hat <- matrix(beta.hat, ncol=k, byrow=FALSE)
 	sigma.hat <- matrix(sigma.hat, ncol=k, byrow=FALSE)
 	
 	if(nrow(beta.hat) > nsnp) beta.hat <- matrix(beta.hat[snp.vars, ], nrow = nsnp, ncol=k, byrow=FALSE)
 	if(nrow(sigma.hat) > nsnp) sigma.hat <- matrix(sigma.hat[snp.vars, ], nrow = nsnp, ncol=k, byrow=FALSE)
-	
+
 	rownames(beta.hat) <- snp.vars
 	rownames(sigma.hat) <- snp.vars
 	colnames(beta.hat) <- traits.lab
@@ -54,6 +54,11 @@ h.traits <- function(snp.vars, traits.lab, beta.hat, sigma.hat, ncase, ncntl, co
 	colnames(pheno) <- colnames(pheno1) <- colnames(pheno2) <- traits.lab
 	rownames(pheno) <- rownames(pheno1) <- rownames(pheno2) <- snp.vars
 
+    # Vectors for new meta-anlaysis standard errors
+    sd.meta <- sd1.meta <- sd2.meta <- rep(NA, nsnp)
+	names(sd.meta) <- names(sd1.meta) <- names(sd2.meta) <- snp.vars
+
+
 	OS <- (is.null(search) || search==1)
 	TS <- (is.null(search) || search==2)
 	meta.res <- sub1.res <- sub2.res <- NULL
@@ -63,16 +68,22 @@ h.traits <- function(snp.vars, traits.lab, beta.hat, sigma.hat, ncase, ncntl, co
 		{
 			jj <- if(nrow(ncase) == 1) 1 else j
 			res <- traits.meta(rep(TRUE, k), snp.vars[j], beta.hat[j, ], sigma.hat[j,]
-							   , ncase[jj, ], ncntl[jj, ], rmat = cor, side = side, cor.numr = cor.numr, wt.sigma = TRUE)
+							   , ncase[jj, ], ncntl[jj, ], rmat = cor, side = side,
+                               cor.numr = cor.numr, wt.sigma = TRUE)
 			pval[j] <- res$pval
 			beta[j] <- res$beta
 			sd[j] <- res$sd
+
+            # Compute new meta-analysis standard error
+            #sd.meta[j] <- meta.se(cor, sigma.hat[j, ])
+
 		}
 		meta.res <- list(pval=pval, beta=beta, sd=sd)
 	}
 
 	subset0 <- data.frame(pval=rep(NA, nsnp), pheno=rep("NA", nsnp), stringsAsFactors=FALSE)
-	subset00 <- data.frame(pval=rep(NA, nsnp), pheno1=rep("NA", nsnp), pheno2=rep("NA", nsnp), stringsAsFactors=FALSE)
+	subset00 <- data.frame(pval=rep(NA, nsnp), pheno1=rep("NA", nsnp), pheno2=rep("NA", nsnp), 
+                           stringsAsFactors=FALSE)
 	if(OS)
 	{ 	
 		if(is.null(pval.args) || is.null(pval.args$search)) pval.args <- c(pval.args, list(search = 1))
@@ -86,16 +97,22 @@ h.traits <- function(snp.vars, traits.lab, beta.hat, sigma.hat, ncase, ncntl, co
 			{
 				nsub <- sum(sub)
 				rmat <- matrix(cor[sub, sub], nsub, nsub)
-				res <- h.traits1(nsub, beta.hat[j, sub], sigma.hat[j, sub], ncase[jj, sub], ncntl[jj, sub], rmat = rmat
-						 , cor.numr=cor.numr, side = side, zmax.args=zmax.args
+				res <- h.traits1(nsub, beta.hat[j, sub], sigma.hat[j, sub], ncase[jj, sub], ncntl[jj, sub], 
+                       rmat = rmat, cor.numr=cor.numr, side = side, zmax.args=zmax.args
 						 , meth.pval=meth.pval, pval.args=pval.args)
+
+                pval[j]       <- res$pval
+			    pheno[j, sub] <- res$pheno
+		    	beta[j]       <- res$beta
+			    sd[j]         <- res$sd
+
+                # Compute new meta-analysis standard error
+                sd.meta[j] <- meta.se(cor, sigma.hat[j, ], subset=res$pheno)
+
 			}
-			pval[j] <- res$pval
-			pheno[j, sub] <- res$pheno
-			beta[j] <- res$beta
-			sd[j] <- res$sd
+			
 		}
-		sub1.res <- list(pval=pval, beta=beta, sd=sd, pheno = pheno)
+		sub1.res <- list(pval=pval, beta=beta, sd=sd, pheno=pheno, sd.meta=sd.meta)
 	}
 
 	if(TS)
@@ -112,29 +129,40 @@ h.traits <- function(snp.vars, traits.lab, beta.hat, sigma.hat, ncase, ncntl, co
 			{
 				nsub <- sum(sub)
 				rmat <- matrix(cor[sub, sub], nsub, nsub)
-				res <- h.traits2(nsub, beta.hat[j, sub], sigma.hat[j, sub], ncase[jj, sub], ncntl[jj, sub], rmat = rmat
-						 , cor.numr=cor.numr, side = side, zmax.args=zmax.args
-						 , meth.pval=meth.pval, pval.args=pval.args)
+				res <- h.traits2(nsub, beta.hat[j, sub], sigma.hat[j, sub], ncase[jj, sub], ncntl[jj, sub], 
+                                 rmat=rmat, cor.numr=cor.numr, side = side, zmax.args=zmax.args, 
+                                 meth.pval=meth.pval, pval.args=pval.args)
+
+                pval[j]        <- res$pval
+			    pval1[j]       <- res$pval.1
+		     	pval2[j]       <- res$pval.2
+			    pheno1[j, sub] <- res$pheno.1
+			    pheno2[j, sub] <- res$pheno.2
+			    beta1[j]       <- res$beta.1
+			    beta2[j]       <- res$beta.2
+			    sd1[j]         <- res$sd.1
+			    sd2[j]         <- res$sd.2
+
+                # Compute new meta-analysis standard error
+                sd1.meta[j] <- meta.se(cor, sigma.hat[j, ], subset=res$pheno.1)
+                sd2.meta[j] <- meta.se(cor, sigma.hat[j, ], subset=res$pheno.2)
+
 			}
 			
-			pval[j] <- res$pval
-			pval1[j] <- res$pval.1
-			pval2[j] <- res$pval.2
 			
-			pheno1[j, sub] <- res$pheno.1
-			pheno2[j, sub] <- res$pheno.2
-			
-			beta1[j] <- res$beta.1
-			beta2[j] <- res$beta.2
-			
-			sd1[j] <- res$sd.1
-			sd2[j] <- res$sd.2
 		}
-		sub2.res <- list(pval=pval, pval.1 = pval1, beta.1=beta1, sd.1=sd1, pheno.1 = pheno1
-						 , pval.2 = pval2, beta.2=beta2, sd.2 = sd2, pheno.2 = pheno2)
+		sub2.res <- list(pval=pval, pval.1 = pval1, beta.1=beta1, sd.1=sd1, pheno.1=pheno1,
+						 pval.2=pval2, beta.2=beta2, sd.2=sd2, pheno.2=pheno2,
+                         sd.1.meta=sd1.meta, sd.2.meta=sd2.meta)
 	}
 	
-	ret <- list(Meta=meta.res, Subset.1sided=sub1.res, Subset.2sided=sub2.res)
+	#ret <- list(Meta=meta.res, Subset.1sided=sub1.res, Subset.2sided=sub2.res)
+    ret <- list(Meta=meta.res, Subset.1sided=sub1.res, Subset.2sided=sub2.res,
+           snp.vars=snp.vars, traits.lab=traits.lab, beta.hat=beta.hat, sigma.hat=sigma.hat,
+           ncase=ncase, ncntl=ncntl, cor=cor, cor.numr=cor.numr, search=search,
+           side=side, meta=meta, zmax.args=zmax.args, meth.pval=meth.pval,
+           pval.args=pval.args)
+ 
 	ret
 }
 
@@ -168,7 +196,7 @@ h.traits1 <- function(k, beta.hat, sigma.hat, ncase, ncntl, rmat, cor.numr, side
 	beta <- sd <- NA
 		
 	res <- traits.meta(pheno, 1, beta.hat, sigma.hat, ncase, ncntl, rmat=rmat, wt.sigma=TRUE)
-		
+	
 	beta <- res$beta
 	if(side == 2) sd <- abs(beta)/qnorm(pval/2, lower.tail=FALSE, log.p = FALSE)
 	else sd <- beta/qnorm(pval, lower.tail=FALSE, log.p = FALSE)
@@ -209,8 +237,8 @@ h.traits2 <- function(k, beta.hat, sigma.hat, ncase, ncntl, rmat, cor.numr, side
 					  , cor.numr=cor.numr, side=side, zmax.args=zmax.args
 					  , meth.pval=meth.pval, pval.args=pval.args2)
 	
-	
-	zopt <- if(res1$pval <= 0 || res2$pval <= 0) NA else -2 * (log(res1$pval) + log(res2$pval))		
+	zopt <- if ( (!is.finite(res1$pval)) || (!is.finite(res2$pval)) || 
+                 (res1$pval <= 0) || (res2$pval <= 0) ) NA else -2 * (log(res1$pval) + log(res2$pval))		
 	
 	if(k1 > 0 && k2 > 0) 
 	{ 
@@ -255,19 +283,21 @@ traits.meta <- function(sub, snp.vars, beta.hat, sigma.hat, ncase, ncntl, rmat, 
 		if(cor.numr) wt <- mySolve(Sigma, rep(1, nsub))
 		else wt <- (1/sigma.hat[sub]^2)
 		
-		numr <- sum(beta.hat[sub] * wt)
-		denr <- sum(outer(wt, wt) * matrix(Sigma, nsub, nsub))
-		beta <- numr/sum(wt)
-		sd <- 1/sqrt(denr)
-		z <- ifelse(is.na(denr) | is.nan(denr) | denr == 0, NA, numr/sqrt(denr))
+		numr  <- sum(beta.hat[sub] * wt)
+		denr  <- sum(outer(wt, wt) * matrix(Sigma, nsub, nsub))
+
+        sumwt <- sum(wt)
+		beta  <- numr/sumwt
+		sd    <- sqrt(denr)/sumwt
+		z     <- ifelse(is.na(denr) | is.nan(denr) | denr == 0, NA, numr/sqrt(denr))
 	}
 	if(side == 2) pval <- 2 * pnorm(abs(numr/sqrt(denr)), lower.tail=FALSE)
 	else pval <- pnorm(numr/sqrt(denr), lower.tail=FALSE)
-	
+
 	list(z = z, beta = beta, sd = sd, pval = pval)
 }
 
-traits.forest <- function(snp.var, traits.lab, beta.hat, sigma.hat, ncase, ncntl, cor = NULL, rlist = NULL
+traits.forest0 <- function(snp.var, traits.lab, beta.hat, sigma.hat, ncase, ncntl, cor = NULL, rlist = NULL
 , level = 0.05, p.adj = TRUE, digits = 2)
 {
 	if(length(snp.var) > 1) stop("Length of snp.var should be 1")	
@@ -291,4 +321,68 @@ traits.forest <- function(snp.var, traits.lab, beta.hat, sigma.hat, ncase, ncntl
 	
 	h.forest(k, snp.var, traits.lab, rlist, res, side = 2, level=level, p.adj = p.adj, digits=digits)
 }
+
+traits.forest <- function(rlist, snp.var, level=0.05, p.adj=TRUE, digits=2)
+{
+	if(length(snp.var) > 1) stop("Length of snp.var should be 1")
+	if(!(snp.var %in% rlist$snp.vars)) stop("snp.var was not a SNP analyzed")
+    traits.lab <- rlist$traits.lab
+    beta.hat   <- rlist$beta.hat
+    sigma.hat  <- rlist$sigma.hat
+    ncase      <- rlist$ncase
+    ncntl      <- rlist$ncntl
+    cor        <- rlist$cor
+    cor.numr   <- rlist$cor.numr
+    search     <- rlist$search
+    side       <- rlist$side
+    zmax.args  <- rlist$zmax.args
+    meth.pval  <- rlist$meth.pval
+    pval.args  <- rlist$pval.args 
+
+	k <- length(traits.lab)
+	nsub <- matrix(FALSE, k, k)
+	diag(nsub) <- TRUE
+	
+    ov      <- rlist[["Meta", exact=TRUE]]
+    cc      <- rlist[["Subset.1sided", exact=TRUE]]
+    cp      <- rlist[["Subset.2sided", exact=TRUE]]
+    ov.flag <- !is.null(ov)
+    cc.flag <- !is.null(cc)
+    cp.flag <- !is.null(cp)
+    if ((!ov.flag) || (!cc.flag) || (!cp.flag)) {
+      if (ov.flag) {
+        meta <- FALSE
+      } else {
+        meta <- TRUE
+      }
+
+      search <- NULL
+      if ((!cc.flag) && (!cp.flag)) {
+        search <- NULL
+      } else if (!cc.flag) {
+        search <- 1
+      } else if (!cp.flag) {
+        search <- 2
+      }
+      ret <- h.traits(snp.var, traits.lab, beta.hat, sigma.hat, ncase, ncntl, 
+                      cor=cor, cor.numr=cor.numr, search=search, side=side, 
+                      meta=meta, zmax.args=zmax.args, meth.pval=meth.pval, 
+                      pval.args=pval.args)
+
+      if (!ov.flag) ov <- ret[["Meta", exact=TRUE]]
+      if (!cc.flag) cc <- ret[["Subset.1sided", exact=TRUE]]
+      if (!cp.flag) cp <- ret[["Subset.2sided", exact=TRUE]]
+    }
+    
+    newlist <- list(Meta=ov, Subset.1sided=cc, Subset.2sided=cp)
+    
+	beta <- beta.hat[snp.var, ]
+	sd   <- sigma.hat[snp.var, ]
+	res  <- list(beta=beta, sd=sd, pval=2*pnorm(abs(beta/sd), lower.tail=FALSE))
+	
+	h.forest(k, snp.var, traits.lab, newlist, res, side=2, level=level, 
+             p.adj=p.adj, digits=digits)
+
+}
+
 
