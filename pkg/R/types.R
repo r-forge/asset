@@ -70,7 +70,8 @@ h.types <- function(dat, response.var, snp.vars, adj.vars, types.lab, cntl.lab, 
     ret <- list(Overall.Logistic=logit.res, Subset.Case.Control=SC.res, Subset.Case.Complement=CC.res,
                 data=dat, response.var=response.var, adj.vars=adj.vars, types.lab=types.lab,
                 cntl.lab=cntl.lab, subset=subset, method=method, side=side, test.type=test.type,
-                zmax.args=zmax.args, meth.pval=meth.pval, pval.args=pval.args, logit=logit)
+                zmax.args=zmax.args, meth.pval=meth.pval, pval.args=pval.args, logit=logit,
+                snp.vars=snp.vars)
 
 	ret
 }
@@ -427,6 +428,8 @@ types.forest <- function(rlist, snp.var, level=0.05, p.adj=TRUE, digits=2)
 {
 	if(length(snp.var) > 1) stop("Length of snp.var should be 1")
 	if(!(snp.var %in% colnames(rlist$data))) stop("colnames of data does not have snp.var")
+    if (!(snp.var %in% rlist$snp.vars)) stop("snp.var was not a SNP analyzed")
+
     types.lab    <- rlist$types.lab
     cntl.lab     <- rlist$cntl.lab
     response.var <- rlist$response.var
