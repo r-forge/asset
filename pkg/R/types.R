@@ -170,6 +170,7 @@ types.score <- function(sub, snp.vars, dat, response.var, adj.vars, types.lab, c
 	
 	if(is.null(adj.vars)) p <- 1
 	else p <- length(adj.vars) + 1
+	geno.flag <- (p == 1 && all(dat[, snp.vars] %in% c(0, 1, 2, NA)))
 	
 	if(is.null(adj.vars)) adj.vars <- ""
 	if(length(adj.vars) > 1) adj.vars <- paste(adj.vars, collapse="+")	
@@ -185,7 +186,7 @@ types.score <- function(sub, snp.vars, dat, response.var, adj.vars, types.lab, c
 	
 	
 	p.vec <- rep(-1, N)
-	if(p == 1) { 
+	if(geno.flag) { 
 		mat <- matrix(table(d.vec), ncol=2)
 		res <- try(glm(mat ~ 1, family=binomial(link="logit")))
 	} else res <- try(glm(d.vec ~ xmat, family=binomial(link="logit")))
@@ -196,7 +197,7 @@ types.score <- function(sub, snp.vars, dat, response.var, adj.vars, types.lab, c
 		p.vec <- rep(mean(d.vec, na.rm = TRUE), N)
 	} else
 	{
-		if(p == 1) p.vec <- rep(res$fitted, N)
+		if(geno.flag) p.vec <- rep(res$fitted, N)
 		else p.vec <- res$fitted
 	}
 	
@@ -227,7 +228,7 @@ types.score <- function(sub, snp.vars, dat, response.var, adj.vars, types.lab, c
 			nmiss.j <- nmiss.ind[(j - 1) * N + (1:N)]
 			NN <- sum(nmiss.j)
 			p.vec.j <- rep(-1, N)
-			if(p == 1) { 
+			if(geno.flag) { 
 				mat <- matrix(table(d.vec[nmiss.j]), ncol=2)
 				res <- try(glm(mat ~ 1, family=binomial(link="logit")))
 			} else res <- try(glm(d.vec ~ xmat, subset = nmiss.j, family=binomial(link="logit")))
@@ -235,7 +236,7 @@ types.score <- function(sub, snp.vars, dat, response.var, adj.vars, types.lab, c
 			if(inherits(res, "try-error") || (!res$converged)) warning("error in glm")
 			else
 			{
-				if(p == 1) p.vec[nmiss.j] <- rep(res$fitted, NN)
+				if(geno.flag) p.vec[nmiss.j] <- rep(res$fitted, NN)
 				else p.vec[nmiss.j] <- res$fitted
 			}
 			
@@ -313,6 +314,7 @@ types.wald <- function(sub, snp.vars, dat, response.var, adj.vars, types.lab, cn
 	
 	if(is.null(adj.vars)) p <- 1
 	else p <- length(adj.vars) + 1
+	geno.flag <- (p == 1 && all(dat[, snp.vars] %in% c(0, 1, 2, NA)))
 	
 	if(is.null(adj.vars)) adj.vars <- ""
 	if(is.null(snp.vars)) snp.vars <- ""
@@ -364,8 +366,8 @@ types.wald <- function(sub, snp.vars, dat, response.var, adj.vars, types.lab, cn
 					 if(adj.vars != "") fmla <- paste(fmla, "+" , adj.vars, sep="")
 
 				   
-				     ret <- c(NA, NA) 
-					 if(p == 1)
+				     	ret <- c(NA, NA) 
+					 if(geno.flag)
 					 {
 						mat <- table(g.vec, 1 - dx1, useNA="no") ; geno <- (0:2)
 						res <- try(glm(mat ~ geno, family=binomial(link="logit")))
@@ -375,7 +377,7 @@ types.wald <- function(sub, snp.vars, dat, response.var, adj.vars, types.lab, cn
 					 else 
 					 {
 						coef <- summary(res)$coef
-						pos <- pmatch(if(p == 1) "geno" else snp, rownames(coef))
+						pos <- pmatch(if(geno.flag) "geno" else snp, rownames(coef))
 						if(!is.na(pos)) ret <- coef[pos, 1:2]
 					 }
 					 ret
