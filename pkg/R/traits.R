@@ -3,6 +3,15 @@ h.traits <- function(snp.vars, traits.lab, beta.hat, sigma.hat, ncase, ncntl, co
 	, cor.numr=FALSE, search=NULL, side=2, meta=FALSE, zmax.args=NULL
 	, meth.pval=c("DLM", "IS", "B"), pval.args=NULL)
 {
+    if (!is.null(search)) {
+      if (!(search %in% 1:2)) stop("ERROR: search must be NULL, 1 or 2")
+    }
+    if ((is.null(side)) || (!(side %in% 1:2))) stop("ERROR: side must be 1 or 2")
+    if ((is.null(meth.pval)) || (!(meth.pval %in% c("DLM", "IS", "B")))) stop("ERROR: meth.pval must be DLM, IS, or B")
+    if ((is.null(meta)) || (!(meta %in% 0:1))) stop("ERROR: meta must be TRUE or FALSE")
+    if ((is.null(cor.numr)) || (!(cor.numr %in% 0:1))) stop("ERROR: cor.numr must be TRUE or FALSE")
+
+
 	k <- length(traits.lab)
 	meth.pval <- meth.pval[1]
 
@@ -84,6 +93,7 @@ h.traits <- function(snp.vars, traits.lab, beta.hat, sigma.hat, ncase, ncntl, co
 	subset0 <- data.frame(pval=rep(NA, nsnp), pheno=rep("NA", nsnp), stringsAsFactors=FALSE)
 	subset00 <- data.frame(pval=rep(NA, nsnp), pheno1=rep("NA", nsnp), pheno2=rep("NA", nsnp), 
                            stringsAsFactors=FALSE)
+
 	if(OS)
 	{ 	
 		if(is.null(pval.args) || is.null(pval.args$search)) pval.args <- c(pval.args, list(search = 1))
@@ -129,6 +139,7 @@ h.traits <- function(snp.vars, traits.lab, beta.hat, sigma.hat, ncase, ncntl, co
 			{
 				nsub <- sum(sub)
 				rmat <- matrix(cor[sub, sub], nsub, nsub)
+
 				res <- h.traits2(nsub, beta.hat[j, sub], sigma.hat[j, sub], ncase[jj, sub], ncntl[jj, sub], 
                                  rmat=rmat, cor.numr=cor.numr, side = side, zmax.args=zmax.args, 
                                  meth.pval=meth.pval, pval.args=pval.args)
@@ -155,13 +166,13 @@ h.traits <- function(snp.vars, traits.lab, beta.hat, sigma.hat, ncase, ncntl, co
 						 pval.2=pval2, beta.2=beta2, sd.2=sd2, pheno.2=pheno2,
                          sd.1.meta=sd1.meta, sd.2.meta=sd2.meta)
 	}
-	
+
 	#ret <- list(Meta=meta.res, Subset.1sided=sub1.res, Subset.2sided=sub2.res)
     ret <- list(Meta=meta.res, Subset.1sided=sub1.res, Subset.2sided=sub2.res,
            snp.vars=snp.vars, traits.lab=traits.lab, beta.hat=beta.hat, sigma.hat=sigma.hat,
            ncase=ncase, ncntl=ncntl, cor=cor, cor.numr=cor.numr, search=search,
            side=side, meta=meta, zmax.args=zmax.args, meth.pval=meth.pval,
-           pval.args=pval.args)
+           pval.args=pval.args, which="h.traits")
  
 	ret
 }
@@ -169,29 +180,33 @@ h.traits <- function(snp.vars, traits.lab, beta.hat, sigma.hat, ncase, ncntl, co
 
 h.traits1 <- function(k, beta.hat, sigma.hat, ncase, ncntl, rmat, cor.numr, side=2, zmax.args=NULL, meth.pval="DLM", pval.args=NULL)
 {
-	if(k == 0) return(list(pval = 1, pheno = NULL, beta = NA, sd = NA))
+	if(k == 0) return(list(pval = 1, pheno = NULL, beta = NA, sd = NA, subsetCount=0))
 	
+##### NOTE: meta.def is set to traits.meta ######
 	res <- do.call(z.max, c(list(k, 1, side=side, meta.def=traits.meta, meta.args=list(beta.hat=beta.hat, sigma.hat=sigma.hat
 				 , ncase=ncase, ncntl=ncntl, rmat=rmat, cor.numr=cor.numr, wt.sigma=FALSE)), zmax.args))
-	
+
 	zopt <- as.double(res$opt.z)
 	pheno <- as.logical(res$opt.s)
+    subsetCount <- res$subsetCount
 	rm(res)
 
 	if(meth.pval == "DLM")
 	{
 		if(is.null(pval.args) || !("cor.def" %in% names(pval.args))) pval.args <- c(pval.args, list(cor.def=NULL))
 		if(!("cor.args" %in% names(pval.args))) pval.args <- c(pval.args, list(cor.args = list(ncase=ncase, ncntl=ncntl
-																			   , rmat=rmat, cor.numr=cor.numr)))
+																		   , rmat=rmat, cor.numr=cor.numr)))
+
 		pval <- do.call(p.dlm, c(list(t.vec=abs(zopt), k=k, side = side), pval.args))
-		
+
 	}
 	if(meth.pval == "IS")
 	{
 		pval <- do.call(p.tube, c(list(t.vec=abs(zopt), k=k, side = side, ncase=ncase
 								, ncntl=ncntl, rmat=rmat, cor.numr=cor.numr), pval.args))
 	}
-	if(meth.pval=="B") pval <- p.bon(abs(zopt), k, search = 1, side = side)
+	if(meth.pval=="B") pval <- p.bon(abs(zopt), subsetCount, search = 1, side = side)
+    
 
 	beta <- sd <- NA
 		
@@ -201,7 +216,7 @@ h.traits1 <- function(k, beta.hat, sigma.hat, ncase, ncntl, rmat, cor.numr, side
 	if(side == 2) sd <- abs(beta)/qnorm(pval/2, lower.tail=FALSE, log.p = FALSE)
 	else sd <- beta/qnorm(pval, lower.tail=FALSE, log.p = FALSE)
 
-	ret <- list(pval = pval, pheno = pheno, beta = beta, sd = sd)
+	ret <- list(pval = pval, pheno = pheno, beta = beta, sd = sd, subsetCount=subsetCount)
 }
 
 h.traits2 <- function(k, beta.hat, sigma.hat, ncase, ncntl, rmat, cor.numr, side=2, zmax.args=NULL, meth.pval="DLM", pval.args=NULL)
@@ -227,28 +242,32 @@ h.traits2 <- function(k, beta.hat, sigma.hat, ncase, ncntl, rmat, cor.numr, side
 		pval.args1$sizes <- sizes1
 		pval.args2$sizes <- sizes2
 	}
+
 	res1 <- h.traits1(k1, beta.hat=beta.hat[sub1], sigma.hat=sigma.hat[sub1], ncase=ncase[sub1]
 					  , ncntl=ncntl[sub1], rmat=rmat[sub1, sub1]
 					  , cor.numr=cor.numr, side=side, zmax.args=zmax.args
 					  , meth.pval=meth.pval, pval.args=pval.args1)
-	
+
 	res2 <- h.traits1(k2, beta.hat=beta.hat[sub2], sigma.hat=sigma.hat[sub2], ncase=ncase[sub2]
 					  , ncntl=ncntl[sub2], rmat[sub2, sub2]
 					  , cor.numr=cor.numr, side=side, zmax.args=zmax.args
 					  , meth.pval=meth.pval, pval.args=pval.args2)
-	
+
 	zopt <- if ( (!is.finite(res1$pval)) || (!is.finite(res2$pval)) || 
                  (res1$pval <= 0) || (res2$pval <= 0) ) NA else -2 * (log(res1$pval) + log(res2$pval))		
-	
+    subsetCount <- res1$subsetCount + res2$subsetCount
+
 	if(k1 > 0 && k2 > 0) 
 	{ 
 		if(meth.pval != "B") pval <- pchisq(zopt, df = 4, lower.tail = FALSE)
-		if(meth.pval == "B") pval <- pchisq(zopt, df = 4, lower.tail = FALSE) * ((2^k1 - 1) * (2^k2 - 1))
+		#if(meth.pval == "B") pval <- pchisq(zopt, df = 4, lower.tail = FALSE) * ((2^k1 - 1) * (2^k2 - 1))
+        if(meth.pval == "B") pval <- pchisq(zopt, df = 4, lower.tail = FALSE) * subsetCount
 	}
 	if(k1 == 0 || k2 == 0 )
 	{
 		if(meth.pval != "B") pval <- pchisq(zopt, df = 2, lower.tail = FALSE)
-		if(meth.pval == "B") pval <- pchisq(zopt, df = 2, lower.tail = FALSE) * ((2^k - 1))
+		#if(meth.pval == "B") pval <- pchisq(zopt, df = 2, lower.tail = FALSE) * ((2^k - 1))
+        if(meth.pval == "B") pval <- pchisq(zopt, df = 2, lower.tail = FALSE) * subsetCount
 	}
 
 	pheno1 <- rep(FALSE, k) ; pheno1[sub1] <- res1$pheno

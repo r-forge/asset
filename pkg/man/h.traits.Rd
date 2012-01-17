@@ -6,20 +6,21 @@
 Performs one-sided or two-sided subset-based meta-analysis of  heteregeneous studies/traits.
 }
 \usage{
-h.traits(snp.vars, traits.lab, beta.hat, sigma.hat, ncase, ncntl, cor=NULL, 
-  cor.numr=FALSE, search=NULL, side=2, meta=FALSE, zmax.args=NULL, 
-  meth.pval=c("DLM","IS","B"), pval.args=NULL)
+h.traits(snp.vars, traits.lab, beta.hat, sigma.hat, ncase, ncntl, 
+  cor=NULL, cor.numr=FALSE, search=NULL, side=2, meta=FALSE, 
+  zmax.args=NULL, meth.pval=c("DLM","IS","B"), pval.args=NULL)
 }
 \arguments{
   \item{snp.vars}{A character vector giving the names or positions of the SNP variables  to be analyzed. No default.}
-  \item{traits.lab}{A character vector giving the names/identifier of the \code{k} studies/traits being analyzed. No default.}
-  \item{beta.hat}{A matrix of dimension length(\code{snp.vars}) X (\code{k}) (or a vector of length \code{k} when 1 SNP is passed). Each row gives the coefficients obtained
-  from the analysis of that SNP accross (k) studies/traits. No default.}
+  \item{traits.lab}{A character vector giving the names/identifiers of the \code{k} studies/traits being analyzed.
+        The order of this vector must match \code{beta.hat} and \code{sigma.hat} No default.}
+  \item{beta.hat}{A matrix of dimension length(\code{snp.vars}) by (\code{k}) (or a vector of length \code{k} when 1 SNP is passed). Each row gives the coefficients obtained
+  from the analysis of that SNP across (k) studies/traits. No default.}
   \item{sigma.hat}{A vector or matrix of same dimension as beta.hat, giving the corresponding standard errors. No default.}
   \item{ncase}{The number of cases in each of the \code{k} studies. This can be same for each SNP, in which case \code{ncase} is a vector of length \code{k}.
-  Alternatively if number of non-missing cases analyzed for each SNP is known, ncase can be a length(\code{snp.vars})X (\code{k}) matrix. No default.}
-  \item{ncntl}{Same as ncase (above) for controls. No default.}
-  \item{cor}{Either a \code{k} X \code{k} matrix of inter-study correlations or a list containing four case/control overlap matrices (for
+  Alternatively if number of non-missing cases analyzed for each SNP is known, ncase can be a length(\code{snp.vars}) by (\code{k}) matrix. No default.}
+  \item{ncntl}{Same as \code{ncase} (above) for controls. No default.}
+  \item{cor}{Either a \code{k} by \code{k} matrix of inter-study correlations or a list containing four case/control overlap matrices (for
 case-control studies)
   named \code{N11}, \code{N00}, \code{N10} and \code{N01}. See details. Default is NULL, so that studies are assumed to be independent.
 The rows and columns of all matrices  needs to be in the same order as \code{traits.lab} and columns 
@@ -35,11 +36,11 @@ test.}
   \item{meta}{Logical. When specified as TRUE, standard fixed effect meta-analysis results are returned together with results from subset-based meta-analysis. 
 The Default is FALSE.}
   \item{zmax.args}{Optional arguments to be passed to \code{\link{z.max}} as a named list. This option can be useful if the user wants to
-restrict subset searches in some structured ways, for example, incorporating some ordering constraints.}
+restrict subset searches in some structured way, for example, incorporating some ordering constraints.}
  \item{pval.args}{Optional arguments  to be
   passed to \code{\link{p.dlm}} or \code{\link{p.tube}} as a named list. This option can be useful if the user wants to
-restrict subset searches in some structured ways, for example, incorporating some ordering constraints.}
- \item{meth.pval}{The method of pvalue computation. Currently the options are DLM (Discrete Local
+restrict subset searches in some structured way, for example, incorporating some ordering constraints.}
+ \item{meth.pval}{The method of p-value computation. Currently the options are DLM (Discrete Local
   Maximum), IS(Exact Importance Sampling) and B (Bonferroni) with the default option being DLM. The IS method is currently computationally
 feasible for analysis of at most k=10 studies/traits}
 }
@@ -74,11 +75,11 @@ The one-sided subset search maximizes the standard fixed-effect meta-analysis te
 subsets if such an option is specified) of studies to detect the best possible association signals. The p-value returned for the maximum test-statistics automatically
 accounts for multiple testing penalty due to subset search and can be taken as an evidence of an overall association for the SNP accross the \code{k} studies/traits. 
 The one-sided method automatically guarantees identification of studies/traits that have associations in the same direction and thus is useful in applications where
-it is desirable to identify SNPs that shows effects in the same direction across multiple traits/studies. The two-sided subset search, applies one-side subset search seperately for positively and negatively associated traits for a given SNP and then combines the association
+it is desirable to identify SNPs that shows effects in the same direction across multiple traits/studies. The two-sided subset search, applies one-side subset search separately for positively and negatively associated traits for a given SNP and then combines the association
 signals from two directions into a single combined chi-square type statistic. The method is sensitive in detecting SNPs that may be associated with different
 traits in different directions.
 
-The methods allow for accouting for correlation among studies/subject that might arise due to shared subjects across distinct studies or due to correlation
+The methods allow for accounting for correlation among studies/subject that might arise due to shared subjects across distinct studies or due to correlation
 among related traits in the same study. For application of the methd for meta-analysis of case-control studies, the matrices \code{N11}, \code{N10},
 \code{N01} and \code{N00} denote the number subjects that are shared between studies by case-control status. By defintion, the
 diagonals of the matrices \code{N11} and \code{N00} contain the number of cases and controls, respectively, in the \code{k} studies. Also, by definition, 
@@ -86,13 +87,13 @@ diagonals of \code{N10} and \code{N01} are zero since cases cannot serve as cont
 may involve shared controls accross studies, ie non-zero off-diagonal elements of the matrix N00. 
 
 The output standard errors are approximate (based on inverting p-values) and are used for constructing confidence
-intervals in \code{\link{h.summary}} and \code{\link{traits.forest}}.
+intervals in \code{\link{h.summary}} and \code{\link{h.forestPlot}}.
 }
 
 \references{ Bhattacharjee S, Chatterjee N and others. A subset-based approach improves power and interpretation for combined-analysis of genetic association studies of heterogeneous traits. Submitted. \cr
 }
 
-\seealso{ \code{\link{h.summary}}, \code{\link{traits.forest}} }
+\seealso{ \code{\link{h.summary}}, \code{\link{h.forestPlot}} }
 
 \examples{
  # Use the example data
@@ -115,8 +116,9 @@ intervals in \code{\link{h.summary}} and \code{\link{traits.forest}}.
  ncntl      <- diag(N00)
 
  # Now let us call h.traits on these summary data. 
- res <- h.traits(snps, traits.lab, beta.hat, sigma.hat, ncase, ncntl, cor=cor, cor.numr=FALSE, 
-                 search=NULL, side=2, meta=TRUE, zmax.args=NULL, meth.pval="DLM")
+ res <- h.traits(snps, traits.lab, beta.hat, sigma.hat, ncase, ncntl, cor=cor, 
+                 cor.numr=FALSE, search=NULL, side=2, meta=TRUE, 
+                 zmax.args=NULL, meth.pval="DLM")
  
  h.summary(res)
 

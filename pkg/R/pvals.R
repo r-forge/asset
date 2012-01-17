@@ -1,17 +1,20 @@
 
 
-p.bon <- function(t.vec, k, search, side)
+p.bon <- function(t.vec, M, search, side)
 {
+    # M    number of subsets considered
+
 	if(any(t.vec < 0)) warning("Negative input thresholds! Using absolute value.")
 	t.vec <- abs(t.vec)
-	if(search < 2 & side == 2) pval.b <- pmin(2 * pnorm(t.vec, lower.tail=FALSE) * (2^k), 1)
-	if(search < 2 & side == 1) pval.b <- pmin(pnorm(t.vec, lower.tail=FALSE) * (2^k), 1)
+	if(search < 2 & side == 2) pval.b <- pmin(2 * pnorm(t.vec, lower.tail=FALSE) * M, 1)
+	if(search < 2 & side == 1) pval.b <- pmin(pnorm(t.vec, lower.tail=FALSE) * M, 1)
 	if(search == 2) stop("Seach option 2 not yet implemented")
+
 	pval.b
 }
 
-p.tube <- function(t.vec, k, search, side, ncase, ncntl, pool, rmat, cor.numr, sizes = rep(1, k)
-	, nsamp = 50, sub.def = NULL, sub.args=NULL, wt.def=NULL, wt.args=NULL)
+p.tube <- function(t.vec, k, search, side, ncase, ncntl, pool, rmat, cor.numr, sizes=rep(1, k)
+	, nsamp=50, sub.def=NULL, sub.args=NULL, wt.def=NULL, wt.args=NULL)
 {
 	if(!is.null(sub.def) && !is.function(sub.def)) stop("'sub.def' not recognized")
 	
@@ -45,22 +48,20 @@ p.dlm <- function(t.vec, k, search, side, cor.def = NULL, cor.args=NULL, sizes=r
 	if(!search %in% c(0, 1, 2)) stop("Invalid search option")
 	if(search < 2 && !(side %in% c(1, 2))) stop("side should be 1 or 2")
 	if(search == 2) side <- 1
-	
+
 	if(any(t.vec < 0)) warning("Negative input thresholds! Using absolute value.")
-	
+
 	dlm.pval(t.vec, k, search, side, cor.def, cor.args=cor.args, sizes=sizes, sub.def=sub.def, sub.args=sub.args)
 }
 
 dlm.pval <- function(t.vec, k, search, side, cor.def, cor.args, sizes = rep(1, k)
 				, sub.def=NULL, sub.args=NULL, wt.def=NULL, wt.args=NULL)
 {
-	
 	if(k == 1) return(2 * pnorm(t.vec, lower.tail=FALSE))
 
 	NT <- length(t.vec)
 	
-	NS <- (prod(sizes + 1) - 1)
-	
+	NS <- (prod(sizes + 1) - 1)	
 	if(any(t.vec < 0)) t.vec <- abs(t.vec)
 
 	low <- t.vec
@@ -78,6 +79,7 @@ dlm.pval <- function(t.vec, k, search, side, cor.def, cor.args, sizes = rep(1, k
 	
 	while (i <= NS)
 	{
+
 		pos <- max(which(xx < sizes))
 		if(pos < kk)
 		{
@@ -108,27 +110,31 @@ dlm.pval <- function(t.vec, k, search, side, cor.def, cor.args, sizes = rep(1, k
 			nn.sub <- rep(TRUE, k - 1)
 		}
 		
-		nn.set <- as.logical(nn.x)
 #		Valid neighbors
-		if(!is.null(sub.def)) nn.sub <- nn.sub & apply(nn.set, 2, function(set1) do.call(sub.def, c(list(set1), sub.args)))
-
+		if(!is.null(sub.def)) {
+          nn.set <- as.logical(nn.x)
+          dim(nn.set) <- dim(nn.x)
+          nn.sub <- nn.sub & apply(nn.set, 2, function(set1) do.call(sub.def, c(list(set1), sub.args)))
+        }
+       
 #		Add a term to points with integral still below 1
 		t.sub <- (1:NT)[ss < 1]
-		
+
 		if(length(t.sub) > 0 && search < 2)
 		{
 			rho <- do.call(cor.def, c(list(x, matrix(nn.x[, nn.sub], nrow=k, byrow=FALSE), k), cor.args))
+
 			nr <- dim(rho)[1]
 
 			int <- sapply(t.sub, function(j) qxd.prod.int(low[j], high[j], search, qxd.prod.cor, side=side
 										, rho.mat = matrix(rho[, (j - 1) %% nr + 1], ncol=1)))
-			ss[t.sub] <- ss[t.sub] + NXX * int
-			
+			ss[t.sub] <- ss[t.sub] + NXX * int	
 		}
+
 		if(length(t.sub) > 0 && search == 2)
 		{
 			beta <- do.call(cor.def, c(list(x, nn.x[, nn.sub], k), cor.args))
-			
+	
 			nr <- dim(beta)[1]
 
 #			nn.x2 <- diag(1, k)
@@ -159,11 +165,12 @@ dlm.pval <- function(t.vec, k, search, side, cor.def, cor.args, sizes = rep(1, k
 qxd.prod.int <- function(low1, high1, search, int.func, side, ...)
 {
 	val <- 0
+
 	if(low1 < Inf)
 	{
 		int <- integrate(function(zv)
 						{
-						 
+					 
 						 prob1 <- side * int.func(zv=zv, search, side, ...)
 
 						 (prob1 * dnorm(zv))
@@ -171,6 +178,7 @@ qxd.prod.int <- function(low1, high1, search, int.func, side, ...)
 		if(int$message != "OK") { warning(int$message) ; val <- NA }
 		else val <- int$value
 	}
+
 	val
 }
 
@@ -236,6 +244,7 @@ qxd.prod.coef <- function(zv, search, side, beta.mat)
 
 qxd.prod.cor <- function(zv, search, side, rho.mat)
 {	
+
 	npts <- length(zv)
 	kk <- nrow(rho.mat)
 	
@@ -259,14 +268,13 @@ qxd.prod.cor <- function(zv, search, side, rho.mat)
 		
 	mu.z <- r.vec %o% zv
 	if(search == 2) mu.z1 <- (r.vec + beta * r.vec2) %o% zv
-	
+
 	sd <- sqrt(1 - r.vec^2)
 
 	if(search < 2)
 	{
 		low <- rep(1, kk) %o% -abs(zv1)
 		high <- rep(1, kk) %o% abs(zv1)
-
 		p1 <- pnorm(high, mean = mu.z, sd = sd)
 		if(side == 2) p0 <- pnorm(low, mean = mu.z, sd = sd)
 		else p0 <- rep(0, kk, npts)
@@ -280,12 +288,13 @@ qxd.prod.cor <- function(zv, search, side, rho.mat)
 	}
 	
 	pp <- (p1 - p0)
+
 	ss <- apply(pp, 2, function(x) { if(search == 2) (prod(2 * x)) else prod(x) })
 	ss <- ifelse(zv1 == Inf, 1, ss)
-	
+
 #	DEBUG
 #	print(rbind(zv,ss))
-	
+
 	if(any(is.na(ss))) stop("NA in integrand")
 	ss
 }
@@ -294,7 +303,6 @@ qxd.prod.cor <- function(zv, search, side, rho.mat)
 coef.meta <- function(x1, X2, k, ncase, ncntl, rmat=NULL, cor.numr=FALSE)
 {
 	if(cor.numr) stop("Method DLM does not support cor.numr=TRUE for search=2")
-	
 	if(is.null(rmat)) rmat <- diag(1, k)
 	rneff <- sqrt(ncase * ncntl/(ncase + ncntl))
 	
@@ -338,6 +346,7 @@ coef.meta <- function(x1, X2, k, ncase, ncntl, rmat=NULL, cor.numr=FALSE)
 
 cor.meta <- function(x1, X2, k, ncase, ncntl, rmat=NULL, cor.numr=FALSE)
 {
+
 	if(is.null(rmat)) rmat <- diag(1, k)
 	
 	rneff <- sqrt(ncase * ncntl/(ncase + ncntl))
@@ -366,11 +375,13 @@ cor.meta <- function(x1, X2, k, ncase, ncntl, rmat=NULL, cor.numr=FALSE)
 		rho		
 	}
 	rho.mat <- matrix(apply(X2, 2, cor.func), ncol = nsnp, byrow = TRUE)
+
 	rho.mat
 }
 
 cor.types <- function(x1, X2, k, ncase, ncntl, pool)
 {
+
 	nsnp <- length(ncntl)
 	if(is.null(dim(ncase))) dim(ncase) <- c(k, nsnp)
 
@@ -451,7 +462,7 @@ checkSim1 <- function(Z, t1, t2, rmat0, neff0, cor.numr=FALSE, sub.def=NULL, sub
 	nsamp <- dim(Z)[2]
 	nsnp <- dim(Z)[3]
 					
-	
+
 	x <- rep(0, k)
 	fm <- matrix(0, nsamp, nsnp)
 	i <- 1
@@ -483,22 +494,25 @@ checkSim1 <- function(Z, t1, t2, rmat0, neff0, cor.numr=FALSE, sub.def=NULL, sub
 				{
 					rmat <- matrix(rmat0[, (j - 1) %% ncol(rmat0) + 1], k, k)
 					rneff <- sqrt(neff0[, (j - 1) %% ncol(neff0) + 1])
+
 					denr <- sqrt(matrix(rneff[set], nrow=1) %*% rmat[set, set] %*% matrix(rneff[set], ncol=1))
+
 				}
+
 				numr <- drop(matrix(rneff[set], nrow = 1) %*% Z[set, , j])
 			}
-			
+	
 			f1 <- ((numr/denr) > t1[j])
 			f2 <- ((-numr/denr) > t2[j])
-			
+
 			fm[, j] <- fm[, j] + (f1 + f2)
 		}
 
 		i <- i + 1		
 	}
-	
+
 	gm <- apply(fm, 2, function(x) mean(ifelse(x > 0, 1/x, 0)))
-	
+
 	gm
 	
 }
@@ -580,7 +594,7 @@ tube.pval <- function(t.vec, k, search, side, ncase, ncntl, pool, rmat = NULL
 	if(k == 1) return(side * pnorm(t.vec, lower.tail=FALSE))
 	
 	nsnp <- length(t.vec)
-	
+
 	if(is.null(dim(ncase))) ncase <- matrix(ncase, ncol = nsnp, byrow=FALSE)
 	if(is.null(dim(ncntl))) ncntl <- matrix(ncntl, ncol = nsnp, byrow=FALSE)
 
@@ -659,6 +673,7 @@ tube.pval <- function(t.vec, k, search, side, ncase, ncntl, pool, rmat = NULL
 		if(search == 1)
 		{
 			Z1 <- tubeSim(x = x, t0 = t.vec, nsamp = nsamp, rmat = rmat, neff = neff)
+
 			p1 <- checkSim1(Z1, t1 = t.vec, t2 = t.vec, rmat0 = rmat, neff0 = neff
 							, sub.def = sub.def, sub.args = sub.args) * (prob1 * mm)
 

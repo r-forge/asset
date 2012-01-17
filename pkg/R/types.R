@@ -1,26 +1,51 @@
+# Nov 01 2011  Pass the subset option in h.types to types.wald
+# Nov 03 2011  Allow types.lab to be NULL
 
 h.types <- function(dat, response.var, snp.vars, adj.vars, types.lab, cntl.lab, subset=NULL, method=NULL, side=2
 , logit=FALSE, test.type = "Score", zmax.args = NULL, meth.pval = c("DLM", "IS", "B"), pval.args = NULL)
 
 {
-     if (!is.null(method)) {
-       if (length(method) != 1) stop("ERROR: The method option must be NULL, case.control, or case.complement")
-       method <- tolower(method)
-       if (method == -1) {
-         pool <= -1
-       } else {
-         temp <- c("case-control", "case-complement") %in% method
-         if (!any(temp)) stop("ERROR: The method option must be NULL, case-control, or case-complement")
-         pool <- temp[2]
-       }
-     } else {
-       pool <- NULL
-     }
-     meth <- test.type
+    if ((is.null(side)) || (!(side %in% 1:2))) stop("ERROR: side must be 1 or 2")
+    if ((is.null(meth.pval)) || (!(meth.pval %in% c("DLM", "IS", "B")))) stop("ERROR: meth.pval must be DLM, IS, or B")
+    if ((is.null(logit)) || (!(logit %in% 0:1))) stop("ERROR: logit must be TRUE or FALSE")
+    if ((is.null(test.type)) || (!(test.type %in% c("Score", "Wald")))) stop("ERROR: test.type must be Score or Wald")
+
+    if (!is.null(method)) {
+      if (length(method) != 1) stop("ERROR: The method option must be NULL, case.control, or case.complement")
+      method <- tolower(method)
+      if (method == -1) {
+        pool <= -1
+      } else {
+        temp <- c("case-control", "case-complement") %in% method
+        if (!any(temp)) stop("ERROR: The method option must be NULL, case-control, or case-complement")
+        pool <- temp[2]
+      }
+    } else {
+      pool <- NULL
+    }
+    meth <- test.type
 	if(!is.null(subset) && sum(subset) == 0) stop("Empty subset of rows")
 	meth.pval <- meth.pval[1]
-	k <- length(types.lab)
-	
+
+    # Check cntl.lab, types.lab. 
+    if (is.null(subset)) {
+      labs <- unique(dat[, response.var])
+    } else {
+      labs <- unique(dat[subset, response.var])
+    }
+    if (!(cntl.lab %in% labs)) stop("ERROR: cntl.lab is not a valid label")
+    if (is.null(types.lab)) types.lab <- labs[!(labs %in% cntl.lab)]
+    temp <- !(types.lab %in% cntl.lab)
+    types.lab <- types.lab[temp]
+    k <- length(types.lab)
+    if (!k) stop("ERROR: with types.lab")
+    if (!all(types.lab %in% labs)) stop("ERROR: with types.lab")
+    if (is.null(subset)) {
+      subset <- dat[, response.var] %in% c(cntl.lab, types.lab)
+    } else {
+      subset <- subset & (dat[, response.var] %in% c(cntl.lab, types.lab))
+    }
+    
 	pval.l <- pval1 <- pval2 <- NULL
 	par.l <- par1 <- par2 <- NULL
 	sigma.l <- sigma1 <- sigma2 <- NULL
@@ -33,7 +58,7 @@ h.types <- function(dat, response.var, snp.vars, adj.vars, types.lab, cntl.lab, 
 	if(logit)
 	{ 
 		res <- try(types.wald(sub=rep(TRUE, k), snp.vars=snp.vars, dat=dat, response.var=response.var, adj.vars=adj.vars
-									  , types.lab = types.lab, cntl.lab = cntl.lab, pool=FALSE, side=side))
+					, types.lab=types.lab, cntl.lab=cntl.lab, subset=subset, pool=FALSE, side=side))
 		if(inherits(res, "try-error")) warning(paste("Error in Overall Logistic:", res))
 		else logit.res <- res
 	}
@@ -71,7 +96,7 @@ h.types <- function(dat, response.var, snp.vars, adj.vars, types.lab, cntl.lab, 
                 data=dat, response.var=response.var, adj.vars=adj.vars, types.lab=types.lab,
                 cntl.lab=cntl.lab, subset=subset, method=method, side=side, test.type=test.type,
                 zmax.args=zmax.args, meth.pval=meth.pval, pval.args=pval.args, logit=logit,
-                snp.vars=snp.vars)
+                snp.vars=snp.vars, which="h.types")
 
 	ret
 }
@@ -99,6 +124,7 @@ h.types0 <- function(k, dat, response.var, snp.vars, adj.vars, types.lab, cntl.l
 
 	zopt <- as.double(res$opt.z)
 	pheno <- matrix(as.logical(res$opt.s), ncol=k, byrow=FALSE)
+    subsetCount <- res$subsetCount
 	
 	names(zopt) <- snp.vars
 	dimnames(pheno)[[1]] <- as.list(snp.vars)
@@ -136,7 +162,7 @@ h.types0 <- function(k, dat, response.var, snp.vars, adj.vars, types.lab, cntl.l
 									, side = side, ncase=ncase, ncntl=ncntl
 									, pool=pool), pval.args))
 	
-	if(meth.pval == "B") pval <- p.bon(abs(zopt), k, search = 0, side = side)
+	if(meth.pval == "B") pval <- p.bon(abs(zopt), subsetCount, search = 0, side = side)
 	
 	names(pval) <- snp.vars
 	
@@ -171,7 +197,7 @@ types.score <- function(sub, snp.vars, dat, response.var, adj.vars, types.lab, c
 	if(is.null(adj.vars)) p <- 1
 	else p <- length(adj.vars) + 1
 	geno.flag <- (p == 1 && all(dat[, snp.vars] %in% c(0, 1, 2, NA)))
-	
+
 	if(is.null(adj.vars)) adj.vars <- ""
 	if(length(adj.vars) > 1) adj.vars <- paste(adj.vars, collapse="+")	
 	fmla <- "~1"
@@ -314,7 +340,7 @@ types.wald <- function(sub, snp.vars, dat, response.var, adj.vars, types.lab, cn
 	
 	if(is.null(adj.vars)) p <- 1
 	else p <- length(adj.vars) + 1
-	geno.flag <- (p == 1 && all(dat[, snp.vars] %in% c(0, 1, 2, NA)))
+     geno.flag <- (p == 1 && all(dat[, snp.vars] %in% c(0, 1, 2, NA)))
 	
 	if(is.null(adj.vars)) adj.vars <- ""
 	if(is.null(snp.vars)) snp.vars <- ""
@@ -366,7 +392,7 @@ types.wald <- function(sub, snp.vars, dat, response.var, adj.vars, types.lab, cn
 					 if(adj.vars != "") fmla <- paste(fmla, "+" , adj.vars, sep="")
 
 				   
-				     	ret <- c(NA, NA) 
+				     ret <- c(NA, NA) 
 					 if(geno.flag)
 					 {
 						mat <- table(g.vec, 1 - dx1, useNA="no") ; geno <- (0:2)

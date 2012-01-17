@@ -23,3 +23,4 @@ identified subset of traits/subtype  and corresponding confidence intervals.
 \details{ 
 Return data frames having as many rows as SNPs in the return list. 
 }
+\seealso{\code{\link{h.forestPlot}}, \code{\link{h.traits}}, \code{\link{h.types}} }

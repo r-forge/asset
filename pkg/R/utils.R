@@ -1,3 +1,5 @@
+# Nov 01 2011  Add function h.forest
+
 
 myInv <- function(A)
 {
@@ -64,21 +66,22 @@ z.max <- function(k, snp.vars, side, meta.def, meta.args, th = rep(-1, length(sn
 	
 	i <- 1
 	ipos <- k
+    subsetCount <- 0
 	while(i <= ((2^k) - 1))
-	{		
+	{	
 		ipos <- max(which(x == 0))
 		x[ipos:k] <- 0
 		x[ipos] <- 1
 		set <- as.logical(x)
-		
-		if(!is.null(sub.def)) if(! do.call(sub.def, c(list(sub), sub.args))){ i <- i + 1 ; next }
-		
+
+		if(!is.null(sub.def)) if(! do.call(sub.def, c(list(set), sub.args))){ i <- i + 1 ; next }
+	    subsetCount <- subsetCount + 1
 #		sub <- which(set)
 		nsub <- sum(set)
-		
+
 		ztmp <- do.call(meta.def, c(list(as.logical(set), snp.vars[snp.sub]), meta.args))$z
 #		print(c(i, set, ztmp, opt.z))
-		
+	
 		ztmp[is.na(ztmp) | is.nan(ztmp)] <- 0
 		
 		lrr <- 0
@@ -96,7 +99,7 @@ z.max <- function(k, snp.vars, side, meta.def, meta.args, th = rep(-1, length(sn
 		
 		if(side == 2) ltmp <- (th[snp.sub] < 0 | (abs(opt.z[snp.sub]) < th[snp.sub]))
 		else ltmp <- (th[snp.sub] < 0 | (opt.z[snp.sub] < th[snp.sub]))
-		
+	
 		snp.sub <- snp.sub[ltmp]
 		if(length(snp.sub) < 1) break
 		
@@ -104,8 +107,15 @@ z.max <- function(k, snp.vars, side, meta.def, meta.args, th = rep(-1, length(sn
 	}
 #	print(c(i, set, ztmp, opt.z))
 #	stop()
-	opt.z[opt.z == 0] <- NA
-	ret <- list(opt.z = opt.z, opt.s = opt.s)
+
+    # Change here
+	#opt.z[opt.z == 0] <- NA
+    
+    opt.z[!is.finite(opt.z)] <- 0
+    if (all(opt.z == 0)) opt.s[] <- 0
+
+	ret <- list(opt.z = opt.z, opt.s = opt.s, subsetCount=subsetCount)
+
 	ret
 	
 }
@@ -344,4 +354,19 @@ meta.se <- function(rmat, sigma, subset=NULL) {
 
 } # END: meta.se
 
+# Top-level function to make a forest plot
+h.forestPlot <- function(rlist, snp.var, level=0.05, p.adj=TRUE, digits=2) {
+
+  which <- rlist[["which", exact=TRUE]]
+  if (which == "h.types") {
+    types.forest(rlist, snp.var, level=level, p.adj=p.adj, digits=digits)
+  } else if (which == "h.traits") {
+    traits.forest(rlist, snp.var, level=level, p.adj=p.adj, digits=digits)
+  } else {
+    stop("ERROR: rlist is not a valid return list from h.types() or h.traits()")
+  }
+
+  NULL
+
+} # END: h.forest
 
