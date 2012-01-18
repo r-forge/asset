@@ -76,16 +76,21 @@ h.traits <- function(snp.vars, traits.lab, beta.hat, sigma.hat, ncase, ncntl, co
 		for(j in 1:nsnp)
 		{
 			jj <- if(nrow(ncase) == 1) 1 else j
-			res <- traits.meta(rep(TRUE, k), snp.vars[j], beta.hat[j, ], sigma.hat[j,]
-							   , ncase[jj, ], ncntl[jj, ], rmat = cor, side = side,
-                               cor.numr = cor.numr, wt.sigma = TRUE)
-			pval[j] <- res$pval
-			beta[j] <- res$beta
-			sd[j] <- res$sd
+			sub <- !(is.na(beta.hat[j, ]) | is.na(sigma.hat[j, ]) | is.na(ncase[jj, ]) | is.na(ncntl[jj, ]))
+			if(any(sub))
+			{
+				nsub <- sum(sub)
+				rmat <- matrix(cor[sub, sub], nsub, nsub)
+				res <- traits.meta(sub, snp.vars[j], beta.hat[j, ], sigma.hat[j,]
+							, ncase[jj, ], ncntl[jj, ], rmat = cor, side = side
+							, cor.numr = cor.numr, wt.sigma = TRUE)
+				pval[j] <- res$pval
+				beta[j] <- res$beta
+				sd[j] <- res$sd
 
-            # Compute new meta-analysis standard error
-            #sd.meta[j] <- meta.se(cor, sigma.hat[j, ])
-
+            			# Compute new meta-analysis standard error
+            			#sd.meta[j] <- meta.se(cor, sigma.hat[j, ])
+			}
 		}
 		meta.res <- list(pval=pval, beta=beta, sd=sd)
 	}
