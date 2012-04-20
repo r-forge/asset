@@ -46,6 +46,88 @@ findMiss.vars <- function(x, vars=NULL, miss=NA)
 	
 } # END: findMiss.vars
 
+z.max.ls <- function(k, gene.vars, side, p.vals, th = rep(-1, length(gene.vars))
+			, sub.def = NULL, sub.args = NULL, wt.def=NULL, wt.args=NULL)
+{
+	ngene <- length(gene.vars)
+	gene.sub <- 1:ngene
+	
+	if(length(th) == 1) th = rep(th, ngene)
+	if(length(th) != ngene) stop("Expected one threshold or a threshold for each Gene")
+	
+	x <- rep(0, k)
+	opt.s <- matrix(FALSE, ngene, k)
+	opt.s[, k] <- 1
+	
+	opt.z <- rep(0, ngene)
+	nopt <- rep(0, ngene)
+	ztmp <- opt.z
+	
+	i <- 1
+	ipos <- k
+    subsetCount <- 0
+	while(1)
+	{
+		y <- x
+		j <- k
+		ipos <- -1
+		while(j >= 1)
+		{
+			if(y[j] == 0 && sum(y) < 3) { ipos <- j ; break }
+			y[j] <- 0 
+			j <- j - 1
+		}
+		if(ipos == -1) break
+		
+		x[ipos:k] <- 0
+		x[ipos] <- 1
+		set <- as.logical(x)
+
+		if(!is.null(sub.def)) if(! do.call(sub.def, c(list(set), sub.args))){ i <- i + 1 ; next }
+	    subsetCount <- subsetCount + 1
+#		sub <- which(set)
+		nsub <- sum(set)
+
+		ztmp <- ls.meta(as.logical(set), gene.vars[gene.sub], p.vals = p.vals, side=2)$z
+#		print(c(i, set, ztmp, opt.z))
+	
+		ztmp[is.na(ztmp) | is.nan(ztmp)] <- 0
+		
+		lrr <- 0
+		
+		if(side == 2) pos <- (pnorm(abs(ztmp), 0, 1, lower=FALSE, log=TRUE) - pnorm(abs(opt.z[gene.sub]), 0, 1, lower=FALSE, log=TRUE) < lrr)
+		else pos <- (pnorm(ztmp, 0, 1, lower=FALSE, log=TRUE) - pnorm(opt.z[gene.sub], 0, 1, lower=FALSE, log=TRUE) < lrr)
+		npos <- sum(pos)
+		
+		if(npos > 0)
+		{
+			opt.z[gene.sub[pos]] <- ztmp[pos]
+			opt.s[gene.sub[pos], ] <- matrix(set, npos, k, byrow=TRUE)
+			nopt[gene.sub[pos]] <- nsub
+		}
+		
+		if(side == 2) ltmp <- (th[gene.sub] < 0 | (abs(opt.z[gene.sub]) < th[gene.sub]))
+		else ltmp <- (th[gene.sub] < 0 | (opt.z[gene.sub] < th[gene.sub]))
+	
+		gene.sub <- gene.sub[ltmp]
+		if(length(gene.sub) < 1) break
+		
+		i <- i + 1
+	}
+#	print(c(i, set, ztmp, opt.z))
+#	stop()
+
+    # Change here
+	#opt.z[opt.z == 0] <- NA
+    
+    opt.z[!is.finite(opt.z)] <- 0
+    if (all(opt.z == 0)) opt.s[] <- 0
+
+	ret <- list(opt.p = 1 - pnorm(opt.z), opt.s = opt.s, subsetCount=subsetCount)
+
+	ret
+}
+
 
 z.max <- function(k, snp.vars, side, meta.def, meta.args, th = rep(-1, length(snp.vars))
 			, sub.def = NULL, sub.args = NULL, wt.def=NULL, wt.args=NULL)

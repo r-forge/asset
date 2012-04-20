@@ -173,7 +173,6 @@ dlm.pval.ls <- function(t.vec, k, search, side, sizes = rep(1, k), sub.def=NULL,
 
 	NT <- length(t.vec)
 	
-	NS <- (prod(sizes + 1) - 1)	
 
 	low <- qnorm(1 - t.vec)
 	high <- rep(Inf, NT)
@@ -184,12 +183,19 @@ dlm.pval.ls <- function(t.vec, k, search, side, sizes = rep(1, k), sub.def=NULL,
 	cc <- c(0, cumsum(sizes[-kk]))
 	
 	ss <- rep(0, NT)
-	i <- 1
 	
-	while (i <= NS)
+	while(1)
 	{
-
-		pos <- max(which(xx < sizes))
+		yy <- xx
+		j <- kk
+		pos <- -1
+		while(j >= 1)
+		{
+			if(yy[j] < sizes[j] && sum(yy) < 3) { pos <- j ; break }
+			yy[j] <- 0 
+			j <- j - 1
+		}
+		if(pos == -1) break
 		if(pos < kk)
 		{
 			xx[(pos + 1):kk] <- 0
@@ -201,11 +207,10 @@ dlm.pval.ls <- function(t.vec, k, search, side, sizes = rep(1, k), sub.def=NULL,
 		NXX <- prod(choose(sizes, xx))
 		
 #		DEBUG
-#		print(c(i, pos, cc[pos], xx, NXX))
+#		print(c(pos, cc[pos], xx, NXX))
 
 #		Skip this subset
-		if(i > (2^3 - 1)) { break ;}
-		if(!is.null(sub.def) && !do.call(sub.def, c(list(set), sub.args))) { i <- i + 1 ; next }
+		if(!is.null(sub.def) && !do.call(sub.def, c(list(set), sub.args))) { next }
 
 #		Matrix with neighboring subsets of x as columns
 		nn.x <- (matrix(x, k, k) + diag(1, k)) %% 2
@@ -244,7 +249,6 @@ dlm.pval.ls <- function(t.vec, k, search, side, sizes = rep(1, k), sub.def=NULL,
 			ss[t.sub] <- ss[t.sub] + NXX * int
 		}
 		if(length(t.sub) == 0) break
-		i <- i + 1
 	}
 
 	ret <- pmin(1, ss)
