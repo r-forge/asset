@@ -90,13 +90,13 @@ z.max.ls <- function(k, gene.vars, side, p.vals, th = rep(-1, length(gene.vars))
 
 		ztmp <- ls.meta(as.logical(set), gene.vars[gene.sub], p.vals = p.vals, side=2)$z
 #		print(c(i, set, ztmp, opt.z))
-	
 		ztmp[is.na(ztmp) | is.nan(ztmp)] <- 0
 		
 		lrr <- 0
 		
 		if(side == 2) pos <- (pnorm(abs(ztmp), 0, 1, lower=FALSE, log=TRUE) - pnorm(abs(opt.z[gene.sub]), 0, 1, lower=FALSE, log=TRUE) < lrr)
 		else pos <- (pnorm(ztmp, 0, 1, lower=FALSE, log=TRUE) - pnorm(opt.z[gene.sub], 0, 1, lower=FALSE, log=TRUE) < lrr)
+		print(pos)
 		npos <- sum(pos)
 		
 		if(npos > 0)
