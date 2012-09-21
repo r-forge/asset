@@ -84,7 +84,7 @@ dlm.pval <- function(t.vec, k, search, side, cor.def, cor.args, sizes = rep(1, k
 		if(pos < kk)
 		{
 			xx[(pos + 1):kk] <- 0
-			x[(cc[pos]+1):k] <- 0			
+			x[(cc[pos + 1] + 1):k] <- 0			
 		}
 		xx[pos] <- xx[pos] + 1
 		x[cc[pos] + xx[pos]] <- 1
@@ -655,7 +655,7 @@ tube.pval <- function(t.vec, k, search, side, ncase, ncntl, pool, rmat = NULL
 		if(pos < kk)
 		{
 			xx[(pos + 1):kk] <- 0
-			x[(cc[pos+1] + 1):k] <- 0			
+			x[(cc[pos + 1] + 1):k] <- 0			
 		}
 
 		xx[pos] <- xx[pos] + 1
