@@ -152,8 +152,7 @@ h.types0 <- function(k, dat, response.var, snp.vars, adj.vars, types.lab, cntl.l
 	if(meth.pval == "DLM")
 	{
 		if(is.null(pval.args) || !("cor.def" %in% names(pval.args))) pval.args <- c(pval.args, list(cor.def=NULL))
-		if(!("cor.args" %in% names(pval.args))) pval.args <- c(pval.args, list(cor.args = list(ncase=ncase, ncntl=ncntl
-																							   , pool=pool)))
+		if(!("cor.args" %in% names(pval.args))) pval.args <- c(pval.args, list(cor.args = list(ncase=ncase, ncntl=ncntl, pool=pool)))
 		
 		pval <- do.call(p.dlm, c(list(t.vec=abs(zopt), k=k, side = side), pval.args))
 	}
@@ -178,7 +177,7 @@ h.types0 <- function(k, dat, response.var, snp.vars, adj.vars, types.lab, cntl.l
 		if(side == 2) sigma <- abs(par)/qnorm(pval/2, lower.tail=FALSE, log.p=FALSE)
 		else sigma <- par/qnorm(pval, lower.tail=FALSE, log.p=FALSE)
 	}
-	list(pval=pval, beta=par, sd=sigma, pheno=pheno)
+	list(pval=pval, beta=par, sd=sigma, zopt = zopt, pheno=pheno)
 }
 
 types.score <- function(sub, snp.vars, dat, response.var, adj.vars, types.lab, cntl.lab, subset=NULL, pool=FALSE)

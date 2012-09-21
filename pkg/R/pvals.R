@@ -51,7 +51,7 @@ p.dlm <- function(t.vec, k, search, side, cor.def = NULL, cor.args=NULL, sizes=r
 
 	if(any(t.vec < 0)) warning("Negative input thresholds! Using absolute value.")
 
-	dlm.pval(t.vec, k, search, side, cor.def, cor.args=cor.args, sizes=sizes, sub.def=sub.def, sub.args=sub.args)
+	dlm.pval(t.vec, k, search, side, cor.def, cor.args, sizes=sizes, sub.def=sub.def, sub.args=sub.args)
 }
 
 dlm.pval <- function(t.vec, k, search, side, cor.def, cor.args, sizes = rep(1, k)
@@ -111,24 +111,26 @@ dlm.pval <- function(t.vec, k, search, side, cor.def, cor.args, sizes = rep(1, k
 		}
 		
 #		Valid neighbors
-		if(!is.null(sub.def)) {
-          nn.set <- as.logical(nn.x)
-          dim(nn.set) <- dim(nn.x)
-          nn.sub <- nn.sub & apply(nn.set, 2, function(set1) do.call(sub.def, c(list(set1), sub.args)))
-        }
+		if(!is.null(sub.def)) 
+		{
+		nn.set <- as.logical(nn.x)
+		dim(nn.set) <- dim(nn.x)
+		nn.sub <- nn.sub & apply(nn.set, 2, function(set1) do.call(sub.def, c(list(set1), sub.args)))
+		}
        
 #		Add a term to points with integral still below 1
 		t.sub <- (1:NT)[ss < 1]
 
 		if(length(t.sub) > 0 && search < 2)
 		{
-			rho <- do.call(cor.def, c(list(x, matrix(nn.x[, nn.sub], nrow=k, byrow=FALSE), k), cor.args))
-
-			nr <- dim(rho)[1]
-
-			int <- sapply(t.sub, function(j) qxd.prod.int(low[j], high[j], search, qxd.prod.cor, side=side
-										, rho.mat = matrix(rho[, (j - 1) %% nr + 1], ncol=1)))
-			ss[t.sub] <- ss[t.sub] + NXX * int	
+			int <- sapply(t.sub, function(j)
+						{
+							ncor.args <- cor.args
+							ncor.args$ncase <- cor.args$ncase[, j]
+							ncor.args$ncntl <- ncor.args$ncntl[j]
+							qxd.prod.int(low[j], high[j], search, qxd.prod.cor, side=side, x, matrix(nn.x[, nn.sub], nrow=k, byrow=FALSE), cor.def, ncor.args)
+						})
+			ss[t.sub] <- ss[t.sub] + NXX * int
 		}
 
 		if(length(t.sub) > 0 && search == 2)
@@ -162,7 +164,7 @@ dlm.pval <- function(t.vec, k, search, side, cor.def, cor.args, sizes = rep(1, k
 	ret
 }
 	
-qxd.prod.int <- function(low1, high1, search, int.func, side, ...)
+qxd.prod.int <- function(low1, high1, search, int.func, side, x, nn.x, cor.def, cor.args)
 {
 	val <- 0
 
@@ -171,7 +173,7 @@ qxd.prod.int <- function(low1, high1, search, int.func, side, ...)
 		int <- integrate(function(zv)
 						{
 					 
-						 prob1 <- side * int.func(zv=zv, search, side, ...)
+						 prob1 <- side * int.func(zv=zv, search, side, x, nn.x, cor.def, cor.args)
 
 						 (prob1 * dnorm(zv))
 						}, lower=low1, upper=high1)
@@ -242,12 +244,12 @@ qxd.prod.coef <- function(zv, search, side, beta.mat)
 	ss
 }
 
-qxd.prod.cor <- function(zv, search, side, rho.mat)
+qxd.prod.cor <- function(zv, search, side, x, nn.x, cor.def, cor.args)
 {	
-
+	k <- length(x)
+	rho.mat <- do.call(cor.def, c(list(x, nn.x, k), cor.args))
 	npts <- length(zv)
 	kk <- nrow(rho.mat)
-	
 	if(is.null(dim(rho.mat))) stop("rho.mat should be a matrix")
 	if(search == 2 && ncol(rho.mat) != 3) stop("Expected 3 columns in rho.mat")
 	if(search < 2 && ncol(rho.mat) != 1) stop("Expected 1 column in rho.mat")
@@ -346,11 +348,8 @@ coef.meta <- function(x1, X2, k, ncase, ncntl, rmat=NULL, cor.numr=FALSE)
 
 cor.meta <- function(x1, X2, k, ncase, ncntl, rmat=NULL, cor.numr=FALSE)
 {
-
 	if(is.null(rmat)) rmat <- diag(1, k)
-	
 	rneff <- sqrt(ncase * ncntl/(ncase + ncntl))
-	
 	nsnp <- length(ncase) %/% k
 	if(is.null(dim(rneff))) dim(rneff) <- c(k, nsnp)
 
@@ -358,21 +357,20 @@ cor.meta <- function(x1, X2, k, ncase, ncntl, rmat=NULL, cor.numr=FALSE)
 	n1 <- sum(x1)
 	if(cor.numr) rneff1 <- mySolve(rmat[x1, x1], rneff[x1, ])
 	else rneff1 <- rneff[x1, ]
-	
 	cor.func <- function(x2)
-	{			
+	{
 		x2 <- as.logical(x2)
 		n2 <- sum(x2)
-			
+
 		if(cor.numr) rneff2 <- mySolve(rmat[x2, x2], rneff[x2, ])
 		else rneff2 <- rneff[x2, ]
-			
+
 		sx12 <- t(matrix(rneff1, ncol=nsnp)) %*% matrix(rmat[x1, x2], n1, n2) %*% matrix(rneff2, ncol = nsnp)
 		sx11 <- t(matrix(rneff1, ncol=nsnp)) %*% matrix(rmat[x1, x1], n1, n1) %*% matrix(rneff1, ncol = nsnp)
 		sx22 <- t(matrix(rneff2, ncol=nsnp)) %*% matrix(rmat[x2, x2], n2, n2) %*% matrix(rneff2, ncol = nsnp)
-			
+
 		rho <- ifelse(sx11 == 0 | sx22 == 0, NA, sx12/sqrt(sx11 * sx22))
-		rho		
+		rho
 	}
 	rho.mat <- matrix(apply(X2, 2, cor.func), ncol = nsnp, byrow = TRUE)
 
@@ -381,7 +379,6 @@ cor.meta <- function(x1, X2, k, ncase, ncntl, rmat=NULL, cor.numr=FALSE)
 
 cor.types <- function(x1, X2, k, ncase, ncntl, pool)
 {
-
 	nsnp <- length(ncntl)
 	if(is.null(dim(ncase))) dim(ncase) <- c(k, nsnp)
 
@@ -658,7 +655,7 @@ tube.pval <- function(t.vec, k, search, side, ncase, ncntl, pool, rmat = NULL
 		if(pos < kk)
 		{
 			xx[(pos + 1):kk] <- 0
-			x[(cc[pos]+1):k] <- 0			
+			x[(cc[pos+1] + 1):k] <- 0			
 		}
 
 		xx[pos] <- xx[pos] + 1
