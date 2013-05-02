@@ -48,13 +48,13 @@ the argument \code{pval.args} in \code{\link{h.traits}} and \code{\link{h.types}
 
   # A function to define the correlations between a subset and its neighbors
   # Returned values should not exceed the value of 1
-  cor.def <- function(subset, neighbors, k) {
+  cor.def <- function(subset, neighbors, k, ncase, ncntl) {
     n <- ncol(neighbors)
     mat <- matrix(subset, nrow=k, ncol=n, byrow=FALSE)
     cor <- (mat + neighbors)*(1:k)/(k^2)
     cor <- colSums(cor)
     cor <- cor/max(cor)
-    dim(cor) <- c(1, n)
+    dim(cor) <- c(n, 1)
 
     cor  
   }
@@ -75,6 +75,7 @@ the argument \code{pval.args} in \code{\link{h.traits}} and \code{\link{h.types}
   k     <- 5
   t.vec <- 3 + runif(k)
 
-  p.dlm(t.vec, k, 1, 2, cor.def=cor.def, sub.def=sub.def)
+  p.dlm(t.vec, k, 1, 2, cor.def=cor.def, sub.def=sub.def,
+         cor.args=list(ncase=rep(1000, k), ncntl=rep(1000,k)))
 
 }

@@ -76,7 +76,6 @@ dlm.pval <- function(t.vec, k, search, side, cor.def, cor.args, sizes = rep(1, k
 	
 	ss <- rep(0, NT)
 	i <- 1
-	
 	while (i <= NS)
 	{
 
@@ -109,7 +108,6 @@ dlm.pval <- function(t.vec, k, search, side, cor.def, cor.args, sizes = rep(1, k
 			if(is.null(dim(nn.x))) nn.x <- matrix(nn.x, nrow = k)
 			nn.sub <- rep(TRUE, k - 1)
 		}
-		
 #		Valid neighbors
 		if(!is.null(sub.def)) 
 		{
@@ -117,28 +115,26 @@ dlm.pval <- function(t.vec, k, search, side, cor.def, cor.args, sizes = rep(1, k
 		dim(nn.set) <- dim(nn.x)
 		nn.sub <- nn.sub & apply(nn.set, 2, function(set1) do.call(sub.def, c(list(set1), sub.args)))
 		}
-       
 #		Add a term to points with integral still below 1
 		t.sub <- (1:NT)[ss < 1]
 
 		if(length(t.sub) > 0 && search < 2)
 		{
+			cor.args$ncase <- matrix(cor.args$ncase, nrow=k, ncol=NT, byrow=FALSE)
 			int <- sapply(t.sub, function(j)
 						{
 							ncor.args <- cor.args
 							ncor.args$ncase <- cor.args$ncase[, j]
 							ncor.args$ncntl <- ncor.args$ncntl[j]
-							qxd.prod.int(low[j], high[j], search, qxd.prod.cor, side=side, x, matrix(nn.x[, nn.sub], nrow=k, byrow=FALSE), cor.def, ncor.args)
+							qxd.prod.int(low[j], high[j], search, qxd.prod.cor, side=side, x, matrix(nn.x[, nn.sub]
+							, nrow=k, byrow=FALSE), cor.def, ncor.args)
 						})
 			ss[t.sub] <- ss[t.sub] + NXX * int
 		}
-
 		if(length(t.sub) > 0 && search == 2)
 		{
-			beta <- do.call(cor.def, c(list(x, nn.x[, nn.sub], k), cor.args))
-	
-			nr <- dim(beta)[1]
-
+			
+#			Older code 2-sided search with 3 correlations instead of coefficients
 #			nn.x2 <- diag(1, k)
 #			sgn <- 1 - 2 * x
 #			if(sum(x) == 1)
@@ -152,8 +148,16 @@ dlm.pval <- function(t.vec, k, search, side, cor.def, cor.args, sizes = rep(1, k
 #			r.vec3 <- r.vec * r.vec2 + sgn[nn.sub] * sqrt((1 - r.vec * r.vec) * (1 - r.vec2 * r.vec2))
 #			rho.mat <- cbind(r.vec, r.vec2, r.vec3)
 
-			int <- sapply(t.sub, function(j) qxd.prod.int(low[j], high[j], search, qxd.prod.coef, side=side
-									, beta.mat = matrix(beta[, , (j - 1) %% nr + 1], ncol = 2)))
+			cor.args$ncase <- matrix(cor.args$ncase, nrow=k, ncol=NT, byrow=FALSE)
+			int <- sapply(t.sub, function(j)
+						{
+							ncor.args <- cor.args
+							ncor.args$ncase <- cor.args$ncase[, j]
+							ncor.args$ncntl <- ncor.args$ncntl[j]
+							qxd.prod.int(low[j], high[j], search, qxd.prod.coef, side=side, x=x, nn.x=matrix(nn.x[, nn.sub]
+								, nrow=k, byrow=FALSE), cor.def, cor.args)
+						})
+						
 			ss[t.sub] <- ss[t.sub] + NXX * int
 		}
 		if(length(t.sub) == 0) break
@@ -184,8 +188,11 @@ qxd.prod.int <- function(low1, high1, search, int.func, side, x, nn.x, cor.def, 
 	val
 }
 
-qxd.prod.coef <- function(zv, search, side, beta.mat)
-{	
+qxd.prod.coef <- function(zv, search, side, x, nn.x, cor.def, cor.args)
+{
+	k <- length(x)
+	beta.mat <- matrix(drop(do.call(cor.def, c(list(x, nn.x, k), cor.args))), ncol=2, byrow=FALSE)
+
 	npts <- length(zv)
 
 	if(any(is.na(beta.mat))) stop("NA in beta.mat")
@@ -676,7 +683,6 @@ tube.pval <- function(t.vec, k, search, side, ncase, ncntl, pool, rmat = NULL
 
 			p2 <- if(side == 2) p1 else rep(0, nsnp)
 			pv <- pv + (p1 + p2)
-#			print(c(1111, p1, p2))
 		}
 		if(search == 2)
 		{
@@ -692,7 +698,6 @@ tube.pval <- function(t.vec, k, search, side, ncase, ncntl, pool, rmat = NULL
 			
 			pv <- pv + (p1 + (p2 - p0))
 			pv0 <- pv0 + p0
-#			print(c(1111, p1, p2, p0, pv, pv0))
 		}
 		
 		jj <- jj + 1

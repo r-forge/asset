@@ -11,7 +11,6 @@ h.traits <- function(snp.vars, traits.lab, beta.hat, sigma.hat, ncase, ncntl, co
     if ((is.null(meta)) || (!(meta %in% 0:1))) stop("ERROR: meta must be TRUE or FALSE")
     if ((is.null(cor.numr)) || (!(cor.numr %in% 0:1))) stop("ERROR: cor.numr must be TRUE or FALSE")
 
-
 	k <- length(traits.lab)
 	meth.pval <- meth.pval[1]
 
@@ -66,7 +65,6 @@ h.traits <- function(snp.vars, traits.lab, beta.hat, sigma.hat, ncase, ncntl, co
     # Vectors for new meta-anlaysis standard errors
     sd.meta <- sd1.meta <- sd2.meta <- rep(NA, nsnp)
 	names(sd.meta) <- names(sd1.meta) <- names(sd2.meta) <- snp.vars
-
 
 	OS <- (is.null(search) || search==1)
 	TS <- (is.null(search) || search==2)
@@ -185,6 +183,7 @@ h.traits <- function(snp.vars, traits.lab, beta.hat, sigma.hat, ncase, ncntl, co
 
 h.traits1 <- function(k, beta.hat, sigma.hat, ncase, ncntl, rmat, cor.numr, side=2, zmax.args=NULL, meth.pval="DLM", pval.args=NULL)
 {
+
 	if(k == 0) return(list(pval = 1, pheno = NULL, beta = NA, sd = NA, subsetCount=0))
 	
 ##### NOTE: meta.def is set to traits.meta ######

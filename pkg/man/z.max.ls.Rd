@@ -1,6 +1,6 @@
 % --- Source file: man/z.max.Rd ---
-\name{z.max}
-\alias{z.max}
+\name{z.max.ls}
+\alias{z.max.ls}
 \title{Z-score Maximization}
 \description{
 Function to maximize z-scores over subsets of traits or subtypes, with possible restrictions and weights. 

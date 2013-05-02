@@ -35,38 +35,3 @@ and should not be called directly. The arguments of this function that have defa
 the argument \code{pval.args} in \code{\link{h.traits}} and \code{\link{h.types}}.
 }
 
-\examples{
-  set.seed(123)
-
-  # A function to define the correlations between a subset and its neighbors
-  # Returned values should not exceed the value of 1
-  cor.def <- function(subset, neighbors, k) {
-    n <- ncol(neighbors)
-    mat <- matrix(subset, nrow=k, ncol=n, byrow=FALSE)
-    cor <- (mat + neighbors)*(1:k)/(k^2)
-    cor <- colSums(cor)
-    cor <- cor/max(cor)
-    dim(cor) <- c(1, n)
-
-    cor  
-  }
-
-  # Subset definition
-  sub.def <- function(logicalVec) {
-    # Only allow the cummulative subsets:
-    # TRUE FALSE FALSE FALSE ...
-    # TRUE TRUE FALSE FALSE ...
-    # TRUE TRUE TRUE FALSE ...
-    # etc
-    sum <- sum(logicalVec)  
-    ret <- all(logicalVec[1:sum])
-
-    ret
-  }
-
-  k     <- 5
-  t.vec <- 3 + runif(k)
-
-  p.dlm(t.vec, k, 1, 2, cor.def=cor.def, sub.def=sub.def)
-
-}
